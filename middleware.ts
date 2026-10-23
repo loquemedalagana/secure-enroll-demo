@@ -1,9 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { SESSION_COOKIE, verifySession } from '@/lib/session';
 
-// [vulnerable 브랜치의 의도된 설계 결함]
-// 인증(로그인 여부)만 확인하고, 역할(RBAC)과 소유자(ABAC)는 확인하지 않는다.
-// 또한 이후 핸들러가 이 미들웨어만 믿고 별도 검증을 하지 않는다.
+// 1차 관문(로그인 여부)일 뿐이다. 최종 인증·인가는 각 핸들러/페이지가 lib/policy.ts로 직접 판단한다.
 export async function middleware(req: NextRequest) {
   const session = await verifySession(req.cookies.get(SESSION_COOKIE)?.value);
   if (session) return NextResponse.next();

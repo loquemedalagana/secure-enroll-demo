@@ -1,9 +1,15 @@
+import { redirect } from 'next/navigation';
 import { courses, enrollments, users } from '@/lib/data';
+import { getSession } from '@/lib/auth';
+import { can } from '@/lib/policy';
 
 export const dynamic = 'force-dynamic';
 
-// [vulnerable] 미들웨어의 로그인 확인만 믿고 역할 확인을 하지 않는다.
-export default function AdminPage() {
+export default async function AdminPage() {
+  const session = await getSession();
+  if (!session) redirect('/login');
+  if (!can(session, 'admin:read')) return <main><h1>403 접근 권한 없음</h1></main>;
+
   return (
     <main>
       <h1>관리자 — 전체 신청 목록</h1>
