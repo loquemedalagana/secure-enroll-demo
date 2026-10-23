@@ -1,0 +1,23 @@
+{
+  "name": "secure-enroll-demo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "교육용 보안 포트폴리오 데모 (의도적 인가 결함 포함, 운영 사용 금지)",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "node --test tests/matrix.test.mjs"
+  },
+  "dependencies": {
+    "next": "14.2.24",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "20.17.10",
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "typescript": "5.6.3"
+  }
+}
