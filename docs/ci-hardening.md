@@ -51,7 +51,7 @@
 
 - `npm ci`, `npm run build`, `npm test` 29건 통과 (Node 24)
 - `actionlint` 1.7.12로 워크플로 정적 검사 통과
-- 워크플로가 GitHub에서 실제로 실행되는지는 저장소에 올린 뒤 확인해야 합니다.
+- GitHub Actions에서 `main`과 `fixed` 푸시 실행 모두 `test`·`audit` 통과 (2026-10-24)
 
 ## 5. 범위 밖과 확장 설계안 (구현하지 않음)
 
@@ -65,4 +65,4 @@
 | SBOM, 빌드 출처 증명과 서명 | 배포 산출물이 없음 | 무엇으로 빌드했는지 증명하고 변조를 검증 |
 
 ---
-작성: Claude Code 보조 · 검증: 감사 게이트 4가지 경우, 빌드·테스트, actionlint를 직접 실행해 확인
+작성: Claude Code 보조 · 검증: 감사 게이트 4가지 경우, 빌드·테스트, actionlint, GitHub Actions 실행 결과를 직접 확인
