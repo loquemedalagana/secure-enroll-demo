@@ -1,11 +1,13 @@
 name: ci
 
 # vulnerable 브랜치는 의도된 인가 결함 때문에 권한 매트릭스 테스트 4건이 실패하는 것이 정상이라 대상에서 뺀다.
+# workflow_dispatch는 Actions 탭에서 수동으로 다시 돌리기 위한 것이다(vulnerable에서 수동 실행하면 test 잡은 실패가 정상).
 on:
   push:
     branches: [main, fixed]
   pull_request:
     branches: [main, fixed]
+  workflow_dispatch:
 
 # 기본 토큰 권한은 모두 끄고, 잡마다 필요한 만큼만 연다.
 permissions: {}

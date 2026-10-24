@@ -9,7 +9,7 @@
 | `test` | `npm ci` → `npm run build` → `npm test`(정책 단위 16건 + 권한 매트릭스 10건 + 로그인 요청 제한 3건) | `contents: read` |
 | `audit` | `.github/scripts/audit-gate.mjs`로 `npm audit` 결과를 예외 목록과 대조 | `contents: read` |
 
-- 트리거: `main`, `fixed`의 push와 pull request. `vulnerable`은 의도된 결함 때문에 테스트 4건이 실패하는 것이 정상이라 대상이 아닙니다.
+- 트리거: `main`, `fixed`의 push와 pull request, 그리고 Actions 탭의 수동 실행(`workflow_dispatch`). `vulnerable`은 의도된 결함 때문에 테스트 4건이 실패하는 것이 정상이라 자동 실행 대상이 아닙니다.
 - 두 잡을 나눠서, 감사가 실패해도 테스트 결과는 따로 보이게 했습니다.
 
 ## 2. 통제와 비용
