@@ -5,8 +5,11 @@ export type SessionPayload = { uid: string; role: Role; exp: number };
 export const SESSION_COOKIE = 'session';
 const enc = new TextEncoder();
 
+// 시크릿이 없으면 공개된 기본값으로 서명하지 않고 실패한다(fail-closed).
 function secret(): string {
-  return process.env.SESSION_SECRET ?? 'dummy-local-only-secret-change-me';
+  const s = process.env.SESSION_SECRET;
+  if (!s) throw new Error('SESSION_SECRET이 설정되지 않았습니다. .env.example을 참고하세요.');
+  return s;
 }
 
 function toB64url(buf: ArrayBuffer | Uint8Array): string {
