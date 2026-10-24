@@ -1,0 +1,48 @@
+name: ci
+
+# vulnerable 브랜치는 의도된 인가 결함 때문에 권한 매트릭스 테스트 4건이 실패하는 것이 정상이라 대상에서 뺀다.
+on:
+  push:
+    branches: [main, fixed]
+  pull_request:
+    branches: [main, fixed]
+
+# 기본 토큰 권한은 모두 끄고, 잡마다 필요한 만큼만 연다.
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # 의존성 캐시는 쓰지 않는다(캐시 오염 경로를 없애는 대신 설치 시간이 늘어난다).
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      # npm audit은 package-lock.json만 읽으므로 설치 없이 실행한다.
+      - run: node .github/scripts/audit-gate.mjs
