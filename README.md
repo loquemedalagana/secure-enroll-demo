@@ -1,5 +1,7 @@
 # secure-enroll-demo
 
+[![ci](https://github.com/loquemedalagana/secure-enroll-demo/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/loquemedalagana/secure-enroll-demo/actions/workflows/ci.yml)
+
 > ⚠️ **교육용 데모입니다. 의도적으로 인가 결함이 들어 있는 브랜치(`vulnerable`)가 있으며, 운영 환경 사용·배포 금지입니다. 로컬에서만 실행하세요.**
 > 모든 사용자·데이터·시크릿은 더미이며, 특정 회사나 서비스의 코드와 무관합니다.
 
