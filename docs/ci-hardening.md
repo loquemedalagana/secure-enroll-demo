@@ -6,7 +6,7 @@
 
 | 잡 | 하는 일 | 권한 |
 |---|---|---|
-| `test` | `npm ci` → `npm run build` → `npm test`(정책 단위 16건 + 권한 매트릭스 10건) | `contents: read` |
+| `test` | `npm ci` → `npm run build` → `npm test`(정책 단위 16건 + 권한 매트릭스 10건 + 로그인 요청 제한 3건) | `contents: read` |
 | `audit` | `.github/scripts/audit-gate.mjs`로 `npm audit` 결과를 예외 목록과 대조 | `contents: read` |
 
 - 트리거: `main`, `fixed`의 push와 pull request. `vulnerable`은 의도된 결함 때문에 테스트 4건이 실패하는 것이 정상이라 대상이 아닙니다.
@@ -49,7 +49,7 @@
 | 만료일이 지난 예외 + 존재하지 않는 예외 | 실패: 만료 예외 보고, 존재하지 않는 예외는 경고 |
 | 접근할 수 없는 레지스트리 | 실패: 결과를 읽지 못해 실패로 처리 |
 
-- `npm ci`, `npm run build`, `npm test` 26건 통과 (Node 24)
+- `npm ci`, `npm run build`, `npm test` 29건 통과 (Node 24)
 - `actionlint` 1.7.12로 워크플로 정적 검사 통과
 - 워크플로가 GitHub에서 실제로 실행되는지는 저장소에 올린 뒤 확인해야 합니다.
 
