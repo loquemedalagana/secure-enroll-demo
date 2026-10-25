@@ -37,7 +37,21 @@ lib/policy.ts: can(주체, 행위, 리소스) ──── false → API 403 / �
 
 ### 판단 입력: RBAC와 ABAC 속성
 
-`can()`은 역할(RBAC)과 속성(ABAC)을 함께 씁니다. 속성 분류는 NIST SP 800-162의 주체·객체·환경 세 가지를 따랐습니다.
+`can()`은 역할(RBAC)과 속성(ABAC)을 함께 씁니다.
+
+**RBAC 구성요소**
+
+| 구성요소 | 의미 | 이 데모에서 | 위치 |
+|---|---|---|---|
+| 사용자 | 시스템을 쓰는 주체 | 더미 계정(student1, instructor1, admin1 등) | `lib/data.ts`의 `users` |
+| 역할 | 직무 단위의 권한 묶음 | `student`, `instructor`, `admin` | `lib/session.ts`의 `Role` |
+| 허가 | 자원에 대한 행위 | `admin:read`, `enrollment:read` | `lib/policy.ts`의 `Action` |
+| 사용자–역할 할당 | 사용자에게 역할 부여 | 계정의 `role` 필드(정적) | `lib/data.ts`의 `users` |
+| 역할–허가 할당 | 역할에 허가 부여 | `can()` 안의 분기. 별도 매핑 테이블은 없음 | `lib/policy.ts`의 `can()` |
+
+**ABAC 속성**
+
+속성 분류는 NIST SP 800-162의 주체·객체·환경 세 가지를 따랐습니다.
 
 | 속성 | 의미 | 이 데모에서 | 어디서 오나 |
 |---|---|---|---|
