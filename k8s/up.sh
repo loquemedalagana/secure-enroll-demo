@@ -22,4 +22,6 @@ kubectl apply -f k8s/manifests/namespace.yaml
 kubectl apply -f k8s/manifests/app.yaml -f k8s/manifests/clients.yaml
 kubectl -n enroll rollout status deploy/enroll-app --timeout=180s
 kubectl -n enroll wait --for=condition=Ready pod/gateway pod/bystander --timeout=180s
-kubectl -n enroll get pods -o wide
+kubectl -n enroll-outside wait --for=condition=Ready pod/outsider --timeout=180s
+kubectl get pods -n enroll -o wide
+kubectl get pods -n enroll-outside -o wide
