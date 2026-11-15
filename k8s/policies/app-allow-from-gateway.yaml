@@ -1,0 +1,19 @@
+# 앱은 gateway에서 오는 3000번만 받는다.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: app-allow-from-gateway
+  namespace: enroll
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: enroll-app
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: gateway
+      ports:
+        - protocol: TCP
+          port: 3000

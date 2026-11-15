@@ -1,0 +1,60 @@
+# 이 저장소의 앱. 이미지는 k8s/Dockerfile로 빌드해 `kind load`로 노드에 싣는다.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: enroll-app
+  namespace: enroll
+  labels:
+    app.kubernetes.io/name: enroll-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: enroll-app
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: enroll-app
+    spec:
+      # 앱은 쿠버네티스 API를 부르지 않으므로 서비스 계정 토큰을 마운트하지 않는다.
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          image: secure-enroll-demo:kind
+          # 레지스트리에서 받지 않는다. 노드에 실린 이미지가 없으면 실패한다.
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 3000
+          env:
+            # 로컬 클러스터 전용 더미 값이다. 실제 시크릿이 아니며 .env.example과 같은 성격이다.
+            - name: SESSION_SECRET
+              value: dummy-kind-only-secret-change-me
+            - name: COOKIE_SECURE
+              value: "false"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          # 노드(kubelet)가 보내는 준비 상태 확인이다. 파드에서 오는 트래픽이 아니다.
+          readinessProbe:
+            httpGet:
+              path: /login
+              port: 3000
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: enroll-app
+  namespace: enroll
+spec:
+  selector:
+    app.kubernetes.io/name: enroll-app
+  ports:
+    - port: 3000
+      targetPort: 3000

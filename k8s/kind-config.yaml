@@ -1,0 +1,11 @@
+# 로컬·CI 러너 전용 단일 노드 클러스터. 네트워크 정책을 Cilium이 적용하도록 kind 기본 CNI와 kube-proxy를 끈다.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: enroll-lab
+networking:
+  disableDefaultCNI: true
+  kubeProxyMode: none
+nodes:
+  - role: control-plane
+    # 노드 이미지도 다이제스트로 고정한다(amd64·arm64 공통 인덱스 값).
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5

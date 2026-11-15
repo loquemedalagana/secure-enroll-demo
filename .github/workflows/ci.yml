@@ -48,3 +48,47 @@ jobs:
           node-version: 24
       # npm audit은 package-lock.json만 읽으므로 설치 없이 실행한다.
       - run: node .github/scripts/audit-gate.mjs
+
+  # 네트워크 계층 검증. 러너 안에 kind 클러스터를 만들어 정책을 걸고 매트릭스를 돌린다.
+  # 클러스터는 러너와 함께 사라진다. 레지스트리 푸시나 배포는 하지 않는다.
+  netpol:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      # 내려받는 도구는 버전과 체크섬으로 고정한다. 체크섬은 각 릴리스가 공개한 값이다.
+      KIND_VERSION: v0.33.0
+      KIND_SHA256: aee6151561422756b764a4ae28e7f44cda5af5a9eead3cc9985112b1de8d8e0d
+      CILIUM_CLI_VERSION: v0.20.1
+      CILIUM_CLI_SHA256: 24e817dcfcc8a12e325ce7547617bcbcf171c5b0b335bb24d2bb1207ba047f61
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: kind와 Cilium CLI 설치 (체크섬 확인)
+        run: |
+          set -euo pipefail
+          bin="$RUNNER_TEMP/bin"
+          mkdir -p "$bin"
+          curl -fsSL -o "$bin/kind" "https://github.com/kubernetes-sigs/kind/releases/download/${KIND_VERSION}/kind-linux-amd64"
+          echo "${KIND_SHA256}  $bin/kind" | sha256sum --check --strict
+          chmod +x "$bin/kind"
+          curl -fsSL -o "$RUNNER_TEMP/cilium.tar.gz" "https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-linux-amd64.tar.gz"
+          echo "${CILIUM_CLI_SHA256}  $RUNNER_TEMP/cilium.tar.gz" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/cilium.tar.gz" -C "$bin" cilium
+          # 러너에 미리 설치된 kind보다 고정한 버전이 먼저 잡히도록 경로 앞에 둔다.
+          echo "$bin" >> "$GITHUB_PATH"
+      # 이미지 빌드, 클러스터 생성, Cilium 설치, 앱·클라이언트 배포. 로컬과 같은 스크립트다.
+      - run: ./k8s/up.sh
+      # 결과 표는 작업 요약에 남는다. 한 줄이라도 기대와 다르면 실패한다.
+      - run: node k8s/verify/run.mjs
+      - name: 실패했을 때 클러스터 상태 출력
+        if: failure()
+        run: |
+          kubectl --context kind-enroll-lab get pods -A -o wide || true
+          kubectl --context kind-enroll-lab -n enroll describe pods || true
+          cilium status || true
