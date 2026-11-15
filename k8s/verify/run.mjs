@@ -106,7 +106,19 @@ const table = (rows) => [
   ...rows.map((r) => `| ${r.from} | ${r.who} | ${r.what} | ${r.layer} | ${r.expect} | ${r.actual} | ${mark(r.ok)} |`),
 ].join('\n');
 
+// 어떤 클러스터에서 돌렸는지 남긴다. 실행 기록만 보고도 노드와 버전을 알 수 있게 하기 위해서다.
+function environment() {
+  const node = kubectl(['get', 'nodes', '-o',
+    'jsonpath={range .items[*]}{.metadata.name}  Kubernetes {.status.nodeInfo.kubeletVersion}  {.status.nodeInfo.containerRuntimeVersion}  {.status.nodeInfo.osImage}{"\\n"}{end}']);
+  const cilium = kubectl(['-n', 'kube-system', 'get', 'ds', 'cilium', '-o', 'jsonpath={.spec.template.spec.containers[0].image}']);
+  const pods = [NS, OUTSIDE_NS].map((ns) =>
+    kubectl(['-n', ns, 'get', 'pods', '-o',
+      'jsonpath={range .items[*]}{.metadata.namespace}/{.metadata.name}  {.status.phase}  {.status.podIP}  {.spec.nodeName}{"\\n"}{end}'])).join('\n');
+  return ['노드', node, '', 'Cilium', cilium.split('@')[0], '', '파드 (네임스페이스/이름  상태  IP  노드)', pods].join('\n');
+}
+
 // --- 실행 ---
+const env = environment();
 kubectl(['delete', '-f', POLICY_DIR, '--ignore-not-found']);
 await sleep(SETTLE_MS);
 const before = measure(baseline);
@@ -123,6 +135,11 @@ const report = [
   '## 네트워크 정책 × 앱 인가 매트릭스',
   '',
   `클러스터 \`${CONTEXT}\` · 실행 ${new Date().toISOString()}`,
+  '',
+  '### 실행 환경',
+  '```',
+  env,
+  '```',
   '',
   '### 1. 기준선 — 정책 없음',
   '나중에 막히는 경로가 정책 전에는 열려 있다.',
