@@ -52,7 +52,7 @@ const netRows = (expected) => [
   { from: 'enroll-app', who: '-', what: 'gateway 파드 3000번으로 TCP 연결 (서버 없음)', run: tcp(NS, 'deploy/enroll-app', gatewayIP, 3000), expect: expected.closed, layer: '네트워크' },
 ];
 
-// 정책이 없을 때: 올바른 관리자 계정이면 어디서든 닿고, 앱도 밖으로 나갈 수 있다. 닫힌 포트는 즉시 거절된다.
+// 정책이 없을 때: 유효한 관리자 계정으로 보낸 요청은 어느 출발지에서든 앱에 도달하고, 앱도 밖으로 연결할 수 있다. 닫힌 포트는 즉시 거절 응답을 보낸다.
 const baseline = netRows({ reach: '200', api: 'CONNECTED', closed: 'REFUSED' });
 
 const matrix = [
