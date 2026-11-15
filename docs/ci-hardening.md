@@ -10,6 +10,39 @@
 | `audit` | `.github/scripts/audit-gate.mjs`로 `npm audit` 결과를 예외 목록과 대조 | `contents: read` |
 | `netpol` | 러너 안에 kind 클러스터를 만들고 `k8s/up.sh` → `k8s/verify/run.mjs`로 네트워크 정책과 앱 인가를 함께 검사. 결과 표는 작업 요약에 남김 | `contents: read` |
 
+```mermaid
+flowchart LR
+  trig(["push · PR<br/>main, fixed"])
+
+  subgraph test["test · 앱 인가"]
+    t1["npm ci"] --> t2["npm run build"] --> t3["npm test<br/>29건"]
+  end
+  subgraph audit["audit · 의존성"]
+    a1["audit-gate.mjs<br/>예외 목록과 대조"]
+  end
+  subgraph netpol["netpol · 네트워크 정책"]
+    n1["kind · Cilium CLI<br/>체크섬 확인"] --> n2["k8s/up.sh<br/>클러스터 · 배포"] --> n3["k8s/verify/run.mjs<br/>기준선 · 매트릭스"] --> n4["작업 요약에<br/>결과 표"]
+  end
+
+  trig --> t1
+  trig --> a1
+  trig --> n1
+
+  classDef app fill:#ddf4ff,stroke:#0969da,color:#0a3069
+  classDef supply fill:#fff1d6,stroke:#9a6700,color:#4d2d00
+  classDef net fill:#d1f5dd,stroke:#1a7f37,color:#0b3d1b
+  classDef neutral fill:#f6f8fa,stroke:#57606a,color:#24292f
+  class t1,t2,t3 app
+  class a1 supply
+  class n1,n2,n3,n4 net
+  class trig neutral
+  style test fill:#ffffff,stroke:#57606a,color:#24292f
+  style audit fill:#ffffff,stroke:#57606a,color:#24292f
+  style netpol fill:#ffffff,stroke:#57606a,color:#24292f
+```
+
+세 잡은 서로 기다리지 않고 따로 실행됩니다. 파랑은 앱 인가, 주황은 의존성, 초록은 네트워크 정책을 확인하는 단계입니다.
+
 - 트리거: `main`, `fixed`의 push와 pull request, 그리고 Actions 탭의 수동 실행(`workflow_dispatch`). `vulnerable`은 의도된 결함 때문에 테스트 4건이 실패하는 것이 정상이라 자동 실행 대상이 아닙니다.
 - 잡을 나눠서, 하나가 실패해도 나머지 결과는 따로 보이게 했습니다.
 - `netpol` 잡은 얇게 두었습니다. 워크플로에는 도구 설치와 스크립트 호출만 있고, 내용은 로컬에서도 그대로 실행할 수 있는 `k8s/`의 스크립트에 있습니다. 클러스터는 러너와 함께 사라집니다.

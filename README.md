@@ -7,6 +7,7 @@
 
 세미나 신청 서비스를 단순화한 Next.js 앱으로, **접근통제(RBAC/ABAC) 결함을 찾고 고치는 과정**을 코드와 테스트로 보여주는 보안 포트폴리오입니다.
 결함을 라우트마다 하나씩 막는 대신, 인가 판단을 한 곳으로 모아 같은 종류의 결함이 다시 생기지 않는 구조로 고치는 데 초점을 두었습니다.
+같은 원칙(기본 거부 + 명시 허용)을 네트워크 계층에도 적용해 로컬 쿠버네티스 클러스터에서 검증한 구성이 `k8s/`에 있습니다.
 
 ## 브랜치
 | 브랜치 | 내용 |
@@ -92,6 +93,39 @@ npm run dev     # 수동 확인
 | `bystander` | 같은 네임스페이스에 있지만 허용되지 않은 출발지 |
 | `outsider` | 정책이 없는 다른 네임스페이스의 출발지 |
 
+```mermaid
+flowchart LR
+  subgraph outside["네임스페이스 enroll-outside · 정책 없음"]
+    outsider["outsider"]
+  end
+  subgraph enroll["네임스페이스 enroll · 기본 거부"]
+    gateway["gateway<br/>허용된 출발지"]
+    bystander["bystander"]
+    app["enroll-app :3000<br/>can()이 인가 판단"]
+  end
+  api["쿠버네티스<br/>API 서버"]
+
+  gateway == "허용<br/>앱이 200 · 401 · 403 응답" ==> app
+  bystander -. "차단<br/>보내는 쪽 정책" .-x app
+  outsider -. "차단<br/>받는 쪽 정책" .-x app
+  app -. "차단<br/>나가는 허용 없음" .-x api
+
+  classDef allow fill:#d1f5dd,stroke:#1a7f37,color:#0b3d1b
+  classDef deny fill:#ffe1e0,stroke:#cf222e,color:#5c0a10
+  classDef target fill:#ddf4ff,stroke:#0969da,color:#0a3069
+  classDef neutral fill:#f6f8fa,stroke:#57606a,color:#24292f
+  class gateway allow
+  class bystander,outsider deny
+  class app target
+  class api neutral
+  style enroll fill:#ffffff,stroke:#57606a,color:#24292f
+  style outside fill:#ffffff,stroke:#57606a,color:#24292f,stroke-dasharray:4 3
+  linkStyle 0 stroke:#1a7f37,stroke-width:3px
+  linkStyle 1,2,3 stroke:#cf222e,stroke-width:2px
+```
+
+초록 실선은 허용된 경로, 빨간 점선은 네트워크 정책이 막는 경로입니다. 앱에서 `gateway`로 나가는 연결도 막히며, 그림에서는 생략했습니다.
+
 정책은 표준 `NetworkPolicy` 3장입니다(`k8s/policies/`). 네임스페이스의 모든 파드는 들어오는 것도 나가는 것도 막고, `gateway → enroll-app:3000` 한 경로만 보내는 쪽과 받는 쪽에서 엽니다. 앱에는 나가는 허용이 없습니다. 정책 적용과 차단 기록은 Cilium과 Hubble이 맡습니다.
 
 ### 실행
@@ -123,7 +157,7 @@ node k8s/verify/run.mjs     # 기준선 → 정책 적용 → 매트릭스 → H
 - 서버가 없는 포트로의 연결은 정책 전에는 즉시 거절(`REFUSED`)되고, 정책 후에는 응답 없이 시간 초과가 됩니다. 닫힌 포트와 정책 차단이 다르게 보입니다.
 
 ### 확인한 범위
-- 로컬(arm64, 2026-11-15): 클러스터를 지우고 처음부터 실행해 기준선 4건, 매트릭스 10건, Hubble 기록 4건이 모두 기대와 일치.
+- 로컬(arm64, 2026-11-15): 클러스터를 지우고 처음부터 실행해 기준선 4건, 두 계층 매트릭스 10건, Hubble 기록 4건이 모두 기대와 일치.
 - GitHub Actions 러너(amd64, 2026-11-15): pull request 실행에서 `netpol` 잡 통과.
 - 기본 거부 정책에서 나가는 방향을 일부러 뺐을 때 4건이 어긋나 종료 코드 1로 끝나는 것을 로컬에서 확인.
 
