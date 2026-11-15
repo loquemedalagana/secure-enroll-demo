@@ -1,0 +1,52 @@
+# 요청을 보내는 쪽 두 개. 앱과 같은 이미지를 쓰고(Node의 fetch로 요청), 서버는 띄우지 않고 대기만 한다.
+#   gateway   : 앱에 접근이 허용된 유일한 출발지
+#   bystander : 같은 네임스페이스에 있지만 허용되지 않은 출발지
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gateway
+  namespace: enroll
+  labels:
+    app.kubernetes.io/name: gateway
+spec:
+  automountServiceAccountToken: false
+  terminationGracePeriodSeconds: 1
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: client
+      image: secure-enroll-demo:kind
+      imagePullPolicy: Never
+      command: ["node", "-e", "setInterval(() => {}, 1 << 30)"]
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: [ALL]
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: bystander
+  namespace: enroll
+  labels:
+    app.kubernetes.io/name: bystander
+spec:
+  automountServiceAccountToken: false
+  terminationGracePeriodSeconds: 1
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: client
+      image: secure-enroll-demo:kind
+      imagePullPolicy: Never
+      command: ["node", "-e", "setInterval(() => {}, 1 << 30)"]
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: [ALL]
