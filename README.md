@@ -2,26 +2,37 @@
 
 [![ci](https://github.com/loquemedalagana/secure-enroll-demo/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/loquemedalagana/secure-enroll-demo/actions/workflows/ci.yml)
 
-> ⚠️ **교육용 데모입니다. 인가 결함을 의도적으로 포함한 브랜치(`vulnerable`)가 있으며, 운영 환경 사용·배포 금지입니다. 로컬에서만 실행하세요.**
-> 모든 사용자·데이터·시크릿은 더미이며, 특정 회사나 서비스의 코드와 무관합니다.
-
-`main`은 v2(웹·API·DB 분리)로 구조를 바꾸고 있습니다. 아래 설명은 v1 기준이며, v1의 마지막 상태는 [`v1.4` 태그](https://github.com/loquemedalagana/secure-enroll-demo/tree/v1.4)에서 볼 수 있습니다. 앱 코드는 `apps/web`으로 옮겼고, `apps/api`에 Nest.js API를 만들고 있습니다(현재 헬스 체크와 DB 구성까지). 설계 결정은 [docs/decisions.md](docs/decisions.md)에 적습니다.
-
-API를 로컬에서 실행하려면 Docker와 Node 24가 필요합니다.
-```bash
-docker compose up -d --wait        # PostgreSQL (127.0.0.1:5433, 더미 값)
-cd apps/api
-cp .env.example .env
-npm ci --ignore-scripts
-npm run db:generate && npm run build
-npm run db:migrate && npm run db:seed
-npm test                           # 8건
-npm start                          # http://127.0.0.1:4000/health/ready
-```
-
-세미나 신청 서비스를 단순화한 Next.js 앱으로, **접근통제(RBAC/ABAC) 결함을 찾고 고치는 과정**을 코드와 테스트로 보여주는 보안 포트폴리오입니다.
-결함을 라우트마다 하나씩 막는 대신, 인가 판단을 한 곳으로 모아 같은 종류의 결함이 다시 생기지 않는 구조로 고치는 것이 목적입니다.
+세미나 신청 서비스를 웹(Next.js), API(Nest.js), DB(PostgreSQL)로 나누어 만들고, 인증과 인가를 설계해 테스트와 CI로 검증하는 저장소입니다.
+결함을 경로마다 하나씩 막는 대신 판단을 한 곳에 모아, 같은 종류의 결함이 다시 생기지 않는 구조로 고치는 과정을 코드와 테스트로 남깁니다.
 같은 원칙(기본 거부 + 명시 허용)을 네트워크 계층에도 적용해 로컬 쿠버네티스 클러스터에서 검증한 구성이 `k8s/`에 있습니다.
+
+일부러 넣은 결함은 `vulnerable` 브랜치(v1)와 결함별 태그(v2)에만 있고, `main`에는 수정된 코드만 있습니다. 사용자, 데이터, 시크릿은 모두 더미 값입니다.
+
+## 현재 상태
+
+`main`은 v1(단일 Next.js 앱)에서 v2(웹·API·DB 분리)로 옮겨 가는 중입니다.
+
+| 구성 | 위치 | 상태 |
+|---|---|---|
+| 웹 (Next.js 14) | `apps/web` | v1의 앱 그대로입니다. 인메모리 데이터로 동작하고 아직 API를 호출하지 않습니다 |
+| API (Nest.js 12) | `apps/api` | 헬스 체크, 로그인, 토큰 발급·검증, 전역 인증 Guard. 테스트 31건 |
+| DB (PostgreSQL 18) | `compose.yaml`, `apps/api/prisma` | Prisma 마이그레이션과 더미 시드 |
+| CI | `.github/workflows/ci.yml` | `web`, `api`, `audit`(앱별), `netpol` |
+| 네트워크 정책 | `k8s/` | kind와 Cilium으로 웹 앱에 적용해 검증 |
+| v2의 의도된 결함 | [docs/v2-defects.md](docs/v2-defects.md) | 계획 단계입니다. 아직 태그가 없습니다 |
+
+다음 순서는 API의 인가와 조회 경로, 요청 로그, 신청 생성, 웹과 API 연결입니다.
+
+| 문서 | 내용 |
+|---|---|
+| [docs/decisions.md](docs/decisions.md) | v2의 설계 결정과 채택하지 않은 대안 |
+| [docs/v2-defects.md](docs/v2-defects.md) | v2에서 다루는 결함 목록과 남기는 방법 |
+| [docs/ci-hardening.md](docs/ci-hardening.md) | CI가 막는 것과 그 비용 |
+| [docs/zero-trust-mapping.md](docs/zero-trust-mapping.md) | v1 인가 구조와 NIST SP 800-207의 대응 |
+
+---
+
+아래 '브랜치'부터 '한계'까지는 v1의 설명입니다. v1의 마지막 상태는 [`v1.4` 태그](https://github.com/loquemedalagana/secure-enroll-demo/tree/v1.4)에 있습니다.
 
 ## 브랜치
 | 브랜치 | 내용 |
@@ -38,6 +49,12 @@ git diff vulnerable fixed -- app lib middleware.ts   # 인가 구조가 어떻�
 git diff vulnerable fixed -- tests                   # 무엇으로 검증했는지
 ```
 
+v2의 결함은 결함마다 태그 한 쌍으로 봅니다. 아직 태그가 없고, 결함을 다루는 PR마다 한 쌍씩 생깁니다.
+```bash
+git diff v2-defect-N v2-fix-N -- apps                # 결함 N을 어떻게 고쳤는지
+git checkout v2-defect-N                             # 결함 N의 상태 재현
+```
+
 ## 의도된 결함 (vulnerable)
 1. **역할 확인 누락 (OWASP A01 Broken Access Control)** — `/api/admin/enrollments`가 로그인 여부만 보고 역할은 보지 않음
 2. **소유자 확인 누락 (BOLA/IDOR)** — `/api/enrollments/[id]`가 요청자와 신청 소유자를 비교하지 않음
@@ -49,6 +66,21 @@ git diff vulnerable fixed -- tests                   # 무엇으로 검증했는
 - 로그인은 `application/json` 본문만 받고(415), 다른 출처의 요청은 거부합니다(403). 다른 사이트의 폼으로 피해자를 공격자 계정에 로그인시키는 로그인 CSRF를 막습니다. 회귀 테스트: `apps/web/tests/login.test.mjs`
 
 ## 실행
+
+### API (`apps/api`)
+Docker와 Node 24가 필요합니다.
+```bash
+docker compose up -d --wait        # PostgreSQL (127.0.0.1:5433, 더미 값)
+cd apps/api
+cp .env.example .env
+npm ci --ignore-scripts
+npm run db:generate && npm run build
+npm run db:migrate && npm run db:seed
+npm test                           # 31건
+npm start                          # http://127.0.0.1:4000/health/ready
+```
+
+### 웹 (`apps/web`)
 Node 22.18 이상이 필요합니다(정책 단위 테스트가 TypeScript 파일을 직접 불러옵니다). CI는 Node 24를 씁니다.
 ```bash
 cd apps/web
@@ -177,11 +209,11 @@ node k8s/verify/run.mjs     # 기준선 → 정책 적용 → 매트릭스 → H
 - 기본 거부 정책에서 나가는 방향을 일부러 뺐을 때 4건이 어긋나 종료 코드 1로 끝나는 것을 로컬에서 확인.
 
 ## 한계
-- 인메모리 데이터, 단순 쿠키 세션 — 실제 서비스 수준의 인증·감사 로그·암호화는 범위 밖입니다.
+- 데이터는 인메모리이고 세션은 서명 쿠키입니다. 감사 로그와 저장 데이터 암호화는 없습니다.
 - 세션은 서명 쿠키라 만료(1시간) 전에 즉시 폐기할 수 없습니다.
-- 로그인 구현은 데모 수준입니다. 비밀번호 해시(scrypt)에 모든 사용자가 같은 솔트를 쓰고, 없는 아이디일 때는 해시를 계산하지 않아 응답 시간으로 아이디 존재 여부를 추정할 수 있으며, 로그인 시도 횟수 제한이 없습니다.
+- 비밀번호 해시(scrypt)에 모든 사용자가 같은 솔트를 쓰고, 없는 아이디일 때는 해시를 계산하지 않아 응답 시간으로 아이디 존재 여부를 추정할 수 있으며, 로그인 시도 횟수 제한이 없습니다.
 - `/api/enrollments/[id]`는 존재 여부(404)를 권한 확인(403)보다 먼저 판단하므로, 로그인한 사용자가 신청 id의 존재 여부를 구분할 수 있습니다. 이 트레이드오프는 [docs/zero-trust-mapping.md](docs/zero-trust-mapping.md)의 4절에 판단 사항으로 기록했습니다.
-- 네트워크 계층 검증은 단일 노드 로컬 클러스터의 실습입니다. 운영 환경의 구성이나 운영 경험을 대신하지 않습니다.
+- 네트워크 계층 검증은 단일 노드 로컬 클러스터(kind)에서 했습니다.
   - 정책은 주소와 포트 수준(L3/L4)입니다. 어떤 사용자가 어떤 경로를 요청했는지는 네트워크 정책이 보지 못하고, 그 판단은 앱의 `can()`이 합니다.
   - `gateway`는 허용된 출발지를 나타내는 빈 파드입니다. 실제 게이트웨이처럼 인증이나 라우팅을 하지 않습니다.
   - 요청을 서비스 이름이 아니라 서비스 IP로 보내서 DNS 허용 규칙을 두지 않았습니다. 이름으로 호출하는 구성이라면 DNS 허용이 추가로 필요합니다.

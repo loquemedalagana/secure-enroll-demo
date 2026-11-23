@@ -5,7 +5,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ko">
       <body>
         <p>
-          <strong>교육용 데모 — 운영 사용 금지</strong>
+          <strong>데모: 계정과 데이터는 모두 더미 값입니다</strong>
         </p>
         {children}
       </body>
