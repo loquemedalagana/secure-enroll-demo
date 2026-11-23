@@ -1,8 +1,9 @@
-// 인증 테스트 (HTTP 수준, 실제 PostgreSQL): 로그인, 입력 검증
+// 인증 테스트 (HTTP 수준, 실제 PostgreSQL): 로그인, 입력 검증, 전역 인증 Guard
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { verifyToken } from '../dist/auth/token.js';
-import { TOKEN_SECRET, startServer } from './helpers.mjs';
+import pg from 'pg';
+import { issueToken, verifyToken } from '../dist/auth/token.js';
+import { DATABASE_URL, TOKEN_SECRET, startServer } from './helpers.mjs';
 
 let server;
 before(async () => {
@@ -83,4 +84,78 @@ test('서버 출력에 비밀번호와 토큰 값이 없음', async () => {
   assert.ok(!output.includes('admin1-pass'));
   assert.ok(!output.includes('wrong-pass-for-log-check'));
   assert.ok(!output.includes(token));
+});
+
+// ---- 전역 인증 Guard ----
+
+async function tokenFor(username) {
+  const res = await login({ username, password: `${username}-pass` });
+  assert.equal(res.status, 200);
+  return (await res.json()).token;
+}
+
+function me(authorization) {
+  return fetch(`${server.base}/auth/me`, { headers: authorization === undefined ? {} : { authorization } });
+}
+
+async function assertUnauthorized(res, label) {
+  assert.equal(res.status, 401, label);
+  assert.deepEqual(await res.json(), { error: 'unauthorized' }, label);
+}
+
+test('유효한 토큰 → 200, id와 역할을 돌려줌', async () => {
+  const student = await me(`Bearer ${await tokenFor('student1')}`);
+  assert.equal(student.status, 200);
+  assert.deepEqual(await student.json(), { id: 'u1', role: 'student' });
+
+  const admin = await me(`Bearer ${await tokenFor('admin1')}`);
+  assert.deepEqual(await admin.json(), { id: 'a1', role: 'admin' });
+});
+
+test('토큰이 없거나 Authorization 형식이 틀리면 401', async () => {
+  const token = await tokenFor('student1');
+  await assertUnauthorized(await me(undefined), '헤더 없음');
+  for (const header of ['Bearer', 'Bearer ', token, `Basic ${token}`, `Bearer ${token} extra`, `Bearer ${token}.extra`]) {
+    await assertUnauthorized(await me(header), header.slice(0, 12));
+  }
+});
+
+test('페이로드의 uid를 관리자(a1)로 바꾼 토큰 → 401', async () => {
+  const [body, signature] = (await tokenFor('student1')).split('.');
+  const payload = JSON.parse(Buffer.from(body, 'base64url').toString());
+  const forged = Buffer.from(JSON.stringify({ ...payload, uid: 'a1' })).toString('base64url');
+  await assertUnauthorized(await me(`Bearer ${forged}.${signature}`), '변조');
+});
+
+test('만료된 토큰 → 401', async () => {
+  // 서버와 같은 키로, 발급 시각을 1시간 1초 전으로 해서 만든다.
+  const expired = issueToken('u1', TOKEN_SECRET, Date.now() - 3601 * 1000);
+  await assertUnauthorized(await me(`Bearer ${expired}`), '만료');
+  // 같은 방식으로 지금 발급한 토큰은 통과한다(위 거부가 만료 때문임을 확인).
+  assert.equal((await me(`Bearer ${issueToken('u1', TOKEN_SECRET)}`)).status, 200);
+});
+
+test('다른 키로 서명한 토큰, 없는 사용자의 토큰 → 401', async () => {
+  await assertUnauthorized(await me(`Bearer ${issueToken('a1', 'attacker-chosen-secret-00000000000000')}`), '다른 키');
+  await assertUnauthorized(await me(`Bearer ${issueToken('no-such-user', TOKEN_SECRET)}`), '없는 사용자');
+});
+
+test('역할은 토큰이 아니라 DB에서 읽음: 역할을 바꾸면 같은 토큰의 다음 요청에 반영됨', async () => {
+  const token = await tokenFor('instructor2');
+  const db = new pg.Client({ connectionString: DATABASE_URL });
+  await db.connect();
+  try {
+    assert.deepEqual(await (await me(`Bearer ${token}`)).json(), { id: 'i2', role: 'instructor' });
+    await db.query(`update users set role = 'student' where id = 'i2'`);
+    assert.deepEqual(await (await me(`Bearer ${token}`)).json(), { id: 'i2', role: 'student' });
+  } finally {
+    await db.query(`update users set role = 'instructor' where id = 'i2'`);
+    await db.end();
+  }
+});
+
+test('@Public이 붙은 경로(헬스 체크, 로그인)는 토큰 없이 열려 있음', async () => {
+  assert.equal((await fetch(`${server.base}/health/live`)).status, 200);
+  assert.equal((await fetch(`${server.base}/health/ready`)).status, 200);
+  assert.equal((await login({ username: 'student1', password: 'student1-pass' })).status, 200);
 });

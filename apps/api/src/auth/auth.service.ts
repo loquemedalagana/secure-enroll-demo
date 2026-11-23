@@ -2,8 +2,9 @@ import { randomBytes } from 'node:crypto';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { requireSecret } from '../config.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import type { AuthUser } from './current-user.js';
 import { hashPassword, verifyPassword } from './password.js';
-import { TOKEN_TTL_SECONDS, type TokenPayload, issueToken, verifyToken } from './token.js';
+import { TOKEN_TTL_SECONDS, issueToken, verifyToken } from './token.js';
 
 export type LoginResult = { token: string; expiresIn: number };
 
@@ -27,7 +28,11 @@ export class AuthService {
     return { token: issueToken(user.id, this.secret), expiresIn: TOKEN_TTL_SECONDS };
   }
 
-  verify(token: string): TokenPayload | null {
-    return verifyToken(token, this.secret);
+  // 토큰이 유효하면 그 사용자의 id와 현재 역할을 돌려준다.
+  // 역할은 토큰이 아니라 DB에서 읽으므로, 역할이 바뀌거나 계정이 지워지면 다음 요청부터 반영된다.
+  async authenticate(token: string): Promise<AuthUser | null> {
+    const payload = verifyToken(token, this.secret);
+    if (!payload) return null;
+    return this.prisma.user.findUnique({ where: { id: payload.uid }, select: { id: true, role: true } });
   }
 }
