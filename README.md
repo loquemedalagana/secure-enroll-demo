@@ -2,26 +2,37 @@
 
 [![ci](https://github.com/loquemedalagana/secure-enroll-demo/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/loquemedalagana/secure-enroll-demo/actions/workflows/ci.yml)
 
-> ⚠️ **교육용 데모입니다. 인가 결함을 의도적으로 포함한 브랜치(`vulnerable`)가 있으며, 운영 환경 사용·배포 금지입니다. 로컬에서만 실행하세요.**
-> 모든 사용자·데이터·시크릿은 더미이며, 특정 회사나 서비스의 코드와 무관합니다.
-
-`main`은 v2(웹·API·DB 분리)로 구조를 바꾸고 있습니다. 아래 설명은 v1 기준이며, v1의 마지막 상태는 [`v1.4` 태그](https://github.com/loquemedalagana/secure-enroll-demo/tree/v1.4)에서 볼 수 있습니다. 앱 코드는 `apps/web`으로 옮겼고, `apps/api`에 Nest.js API를 만들고 있습니다(현재 헬스 체크와 DB 구성까지). 설계 결정은 [docs/decisions.md](docs/decisions.md)에 적습니다. v2에서 다룰 결함 목록과 다루는 방법은 [docs/v2-defects.md](docs/v2-defects.md)에 있습니다.
-
-API를 로컬에서 실행하려면 Docker와 Node 24가 필요합니다.
-```bash
-docker compose up -d --wait        # PostgreSQL (127.0.0.1:5433, 더미 값)
-cd apps/api
-cp .env.example .env
-npm ci --ignore-scripts
-npm run db:generate && npm run build
-npm run db:migrate && npm run db:seed
-npm test                           # 8건
-npm start                          # http://127.0.0.1:4000/health/ready
-```
-
-세미나 신청 서비스를 단순화한 Next.js 앱으로, **접근통제(RBAC/ABAC) 결함을 찾고 고치는 과정**을 코드와 테스트로 보여주는 보안 포트폴리오입니다.
-결함을 라우트마다 하나씩 막는 대신, 인가 판단을 한 곳으로 모아 같은 종류의 결함이 다시 생기지 않는 구조로 고치는 것이 목적입니다.
+세미나 신청 서비스를 웹(Next.js), API(Nest.js), DB(PostgreSQL)로 나누어 만들고, 인증과 인가를 설계해 테스트와 CI로 검증하는 저장소입니다.
+결함을 경로마다 하나씩 막는 대신 판단을 한 곳에 모아, 같은 종류의 결함이 다시 생기지 않는 구조로 고치는 과정을 코드와 테스트로 남깁니다.
 같은 원칙(기본 거부 + 명시 허용)을 네트워크 계층에도 적용해 로컬 쿠버네티스 클러스터에서 검증한 구성이 `k8s/`에 있습니다.
+
+일부러 넣은 결함은 `vulnerable` 브랜치(v1)와 결함별 태그(v2)에만 있고, `main`에는 수정된 코드만 있습니다. 사용자, 데이터, 시크릿은 모두 더미 값입니다.
+
+## 현재 상태
+
+`main`은 v1(단일 Next.js 앱)에서 v2(웹·API·DB 분리)로 옮겨 가는 중입니다.
+
+| 구성 | 위치 | 상태 |
+|---|---|---|
+| 웹 (Next.js 14) | `apps/web` | v1의 앱 그대로입니다. 인메모리 데이터로 동작하고 아직 API를 호출하지 않습니다 |
+| API (Nest.js 12) | `apps/api` | 헬스 체크, 로그인, 토큰 발급·검증, 전역 인증 Guard. 테스트 31건 |
+| DB (PostgreSQL 18) | `compose.yaml`, `apps/api/prisma` | Prisma 마이그레이션과 더미 시드 |
+| CI | `.github/workflows/ci.yml` | `web`, `api`, `audit`(앱별), `netpol` |
+| 네트워크 정책 | `k8s/` | kind와 Cilium으로 웹 앱에 적용해 검증 |
+| v2의 의도된 결함 | [docs/v2-defects.md](docs/v2-defects.md) | 계획 단계입니다. 아직 태그가 없습니다 |
+
+다음 순서는 API의 인가와 조회 경로, 요청 로그, 신청 생성, 웹과 API 연결입니다.
+
+| 문서 | 내용 |
+|---|---|
+| [docs/decisions.md](docs/decisions.md) | v2의 설계 결정과 채택하지 않은 대안 |
+| [docs/v2-defects.md](docs/v2-defects.md) | v2에서 다루는 결함 목록과 남기는 방법 |
+| [docs/ci-hardening.md](docs/ci-hardening.md) | CI가 막는 것과 그 비용 |
+| [docs/zero-trust-mapping.md](docs/zero-trust-mapping.md) | v1 인가 구조와 NIST SP 800-207의 대응 |
+
+---
+
+아래 '브랜치'부터 '한계'까지는 v1의 설명입니다. v1의 마지막 상태는 [`v1.4` 태그](https://github.com/loquemedalagana/secure-enroll-demo/tree/v1.4)에 있습니다.
 
 ## 브랜치
 | 브랜치 | 내용 |
@@ -38,7 +49,7 @@ git diff vulnerable fixed -- app lib middleware.ts   # 인가 구조가 어떻�
 git diff vulnerable fixed -- tests                   # 무엇으로 검증했는지
 ```
 
-v2의 결함은 결함마다 태그 한 쌍으로 봅니다(태그는 결함을 다룬 뒤에 생깁니다).
+v2의 결함은 결함마다 태그 한 쌍으로 봅니다. 아직 태그가 없고, 결함을 다루는 PR마다 한 쌍씩 생깁니다.
 ```bash
 git diff v2-defect-N v2-fix-N -- apps                # 결함 N을 어떻게 고쳤는지
 git checkout v2-defect-N                             # 결함 N의 상태 재현
@@ -55,6 +66,21 @@ git checkout v2-defect-N                             # 결함 N의 상태 재현
 - 로그인은 `application/json` 본문만 받고(415), 다른 출처의 요청은 거부합니다(403). 다른 사이트의 폼으로 피해자를 공격자 계정에 로그인시키는 로그인 CSRF를 막습니다. 회귀 테스트: `apps/web/tests/login.test.mjs`
 
 ## 실행
+
+### API (`apps/api`)
+Docker와 Node 24가 필요합니다.
+```bash
+docker compose up -d --wait        # PostgreSQL (127.0.0.1:5433, 더미 값)
+cd apps/api
+cp .env.example .env
+npm ci --ignore-scripts
+npm run db:generate && npm run build
+npm run db:migrate && npm run db:seed
+npm test                           # 31건
+npm start                          # http://127.0.0.1:4000/health/ready
+```
+
+### 웹 (`apps/web`)
 Node 22.18 이상이 필요합니다(정책 단위 테스트가 TypeScript 파일을 직접 불러옵니다). CI는 Node 24를 씁니다.
 ```bash
 cd apps/web
