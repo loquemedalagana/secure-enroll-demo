@@ -6,8 +6,9 @@
 
 | 잡 | 하는 일 | 권한 |
 |---|---|---|
-| `test` | `npm ci` → `npm run build` → `npm test`(정책 단위 16건 + 권한 매트릭스 10건 + 로그인 요청 형식·출처 검사 3건) | `contents: read` |
-| `audit` | `.github/scripts/audit-gate.mjs`로 `npm audit` 결과를 예외 목록과 대조 | `contents: read` |
+| `web` (v1의 `test`) | `apps/web`에서 `npm ci` → `npm run build` → `npm test`(정책 단위 16건 + 권한 매트릭스 10건 + 로그인 요청 형식·출처 검사 3건) | `contents: read` |
+| `api` | 러너 안의 PostgreSQL(service container)에 `apps/api`의 마이그레이션과 시드를 적용하고 `npm test` 8건 실행 | `contents: read` |
+| `audit (web)`, `audit (api)` | `.github/scripts/audit-gate.mjs`로 앱별 `npm audit` 결과를 앱별 예외 목록과 대조 | `contents: read` |
 | `netpol` | 러너 안에 kind 클러스터를 만들고 `k8s/up.sh` → `k8s/verify/run.mjs`로 네트워크 정책과 앱 인가를 함께 검사. 결과 표는 작업 요약에 남김 | `contents: read` |
 
 ```mermaid
