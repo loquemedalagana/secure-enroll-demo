@@ -7,3 +7,5 @@ node_modules/
 .idea/
 next-env.d.ts
 *.tsbuildinfo
+dist/
+apps/api/src/generated/

@@ -1,0 +1,56 @@
+// 수강신청 도메인. 모든 데이터는 더미 시드로만 채운다.
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  student
+  instructor
+  admin
+}
+
+model User {
+  id           String @id @default(uuid())
+  username     String @unique
+  role         Role
+  // scrypt 해시. 형식은 src/auth/password.ts 참고. 평문 비밀번호는 저장하지 않는다.
+  passwordHash String
+
+  courses     Course[]
+  enrollments Enrollment[]
+
+  @@map("users")
+}
+
+model Course {
+  id           String @id @default(uuid())
+  title        String
+  instructorId String
+
+  instructor  User         @relation(fields: [instructorId], references: [id])
+  enrollments Enrollment[]
+
+  @@index([instructorId])
+  @@map("courses")
+}
+
+model Enrollment {
+  id       String @id @default(uuid())
+  userId   String
+  courseId String
+  // 개인정보 예시 컬럼. 값은 더미다.
+  phone     String
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  course Course @relation(fields: [courseId], references: [id])
+
+  @@index([userId])
+  @@index([courseId])
+  @@map("enrollments")
+}

@@ -1,0 +1,37 @@
+{
+  "name": "secure-enroll-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "수강신청 API (Nest.js + Prisma + PostgreSQL). 데이터와 시크릿은 모두 더미다.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node --env-file-if-exists=.env dist/main.js",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed": "node --env-file-if-exists=.env dist/seed.js",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@nestjs/common": "12.6.0",
+    "@nestjs/core": "12.6.0",
+    "@nestjs/platform-express": "12.6.0",
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "class-transformer": "0.5.1",
+    "class-validator": "0.15.1",
+    "pg": "8.23.1",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.6",
+    "@types/node": "24.19.2",
+    "@types/pg": "8.23.1",
+    "prisma": "7.10.1",
+    "typescript": "6.0.3"
+  },
+  "overrides": {
+    "effect": "3.22.5"
+  }
+}

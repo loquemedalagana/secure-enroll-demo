@@ -5,7 +5,19 @@
 > ⚠️ **교육용 데모입니다. 인가 결함을 의도적으로 포함한 브랜치(`vulnerable`)가 있으며, 운영 환경 사용·배포 금지입니다. 로컬에서만 실행하세요.**
 > 모든 사용자·데이터·시크릿은 더미이며, 특정 회사나 서비스의 코드와 무관합니다.
 
-`main`은 v2(웹·API·DB 분리)로 구조를 바꾸고 있습니다. 아래 설명은 v1 기준이며, v1의 마지막 상태는 [`v1.4` 태그](https://github.com/loquemedalagana/secure-enroll-demo/tree/v1.4)에서 볼 수 있습니다. 앱 코드는 `apps/web`으로 옮겼습니다.
+`main`은 v2(웹·API·DB 분리)로 구조를 바꾸고 있습니다. 아래 설명은 v1 기준이며, v1의 마지막 상태는 [`v1.4` 태그](https://github.com/loquemedalagana/secure-enroll-demo/tree/v1.4)에서 볼 수 있습니다. 앱 코드는 `apps/web`으로 옮겼고, `apps/api`에 Nest.js API를 만들고 있습니다(현재 헬스 체크와 DB 구성까지). 설계 결정은 [docs/decisions.md](docs/decisions.md)에 적습니다.
+
+API를 로컬에서 실행하려면 Docker와 Node 24가 필요합니다.
+```bash
+docker compose up -d --wait        # PostgreSQL (127.0.0.1:5433, 더미 값)
+cd apps/api
+cp .env.example .env
+npm ci --ignore-scripts
+npm run db:generate && npm run build
+npm run db:migrate && npm run db:seed
+npm test                           # 8건
+npm start                          # http://127.0.0.1:4000/health/ready
+```
 
 세미나 신청 서비스를 단순화한 Next.js 앱으로, **접근통제(RBAC/ABAC) 결함을 찾고 고치는 과정**을 코드와 테스트로 보여주는 보안 포트폴리오입니다.
 결함을 라우트마다 하나씩 막는 대신, 인가 판단을 한 곳으로 모아 같은 종류의 결함이 다시 생기지 않는 구조로 고치는 것이 목적입니다.
