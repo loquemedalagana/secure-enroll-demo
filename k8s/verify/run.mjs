@@ -18,7 +18,7 @@ const POLICY_DIR = fileURLToPath(new URL('../policies/', import.meta.url));
 const PROBE = readFileSync(new URL('./probe.cjs', import.meta.url));
 const SETTLE_MS = 5000;
 
-// lib/data.ts의 더미 계정. 실제 계정이 아니다.
+// apps/web/lib/data.ts의 더미 계정. 실제 계정이 아니다.
 const PASSWORDS = { student1: 'student1-pass', instructor1: 'instructor1-pass', admin1: 'admin1-pass' };
 
 function kubectl(args, input) {

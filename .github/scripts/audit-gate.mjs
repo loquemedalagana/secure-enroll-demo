@@ -6,11 +6,13 @@ import { readFileSync } from 'node:fs';
 
 const GATED = new Set(['high', 'critical']);
 const exceptionsPath = process.argv[2] ?? '.github/audit-exceptions.json';
+// 앱마다 package-lock.json이 따로 있으므로 감사할 앱 디렉터리를 두 번째 인자로 받는다.
+const appDir = process.argv[3] ?? '.';
 const today = new Date().toISOString().slice(0, 10);
 
 function runAudit() {
   try {
-    return execFileSync('npm', ['audit', '--json'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    return execFileSync('npm', ['audit', '--json'], { cwd: appDir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
   } catch (e) {
     // 취약점이 있으면 npm audit은 0이 아닌 코드로 끝난다. JSON 출력이 있으면 그대로 쓴다.
     if (e.stdout) return e.stdout;

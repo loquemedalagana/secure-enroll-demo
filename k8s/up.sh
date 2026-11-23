@@ -7,7 +7,8 @@ cd "$(dirname "$0")/.."
 CLUSTER=enroll-lab
 CILIUM_VERSION=1.20.1
 
-docker build -f k8s/Dockerfile -t secure-enroll-demo:kind .
+# 빌드 컨텍스트는 앱 폴더다. 허용 목록(k8s/Dockerfile.dockerignore)은 Dockerfile 옆에서 읽힌다.
+docker build -f k8s/Dockerfile -t secure-enroll-demo:kind apps/web
 kind create cluster --config k8s/kind-config.yaml
 kind load docker-image secure-enroll-demo:kind --name "$CLUSTER"
 

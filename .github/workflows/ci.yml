@@ -22,6 +22,10 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
+    # 앱은 apps/web 아래에 있다. 이 잡의 명령은 모두 그 폴더에서 실행한다.
+    defaults:
+      run:
+        working-directory: apps/web
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -46,8 +50,8 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-      # npm audit은 package-lock.json만 읽으므로 설치 없이 실행한다.
-      - run: node .github/scripts/audit-gate.mjs
+      # npm audit은 package-lock.json만 읽으므로 설치 없이 실행한다. 두 번째 인자는 lock 파일이 있는 앱 폴더다.
+      - run: node .github/scripts/audit-gate.mjs .github/audit-exceptions.json apps/web
 
   # 네트워크 계층 검증. 러너 안에 kind 클러스터를 만들어 정책을 걸고 매트릭스를 돌린다.
   # 클러스터는 러너와 함께 사라진다. 레지스트리 푸시나 배포는 하지 않는다.

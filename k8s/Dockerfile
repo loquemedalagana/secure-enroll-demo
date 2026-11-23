@@ -1,5 +1,5 @@
 # 로컬·CI 러너의 kind 클러스터에 올리기 위한 이미지다. 레지스트리에 푸시하지 않는다.
-# 빌드: docker build -f k8s/Dockerfile -t secure-enroll-demo:kind .   (저장소 루트에서)
+# 빌드: docker build -f k8s/Dockerfile -t secure-enroll-demo:kind apps/web   (저장소 루트에서, 컨텍스트는 앱 폴더)
 #
 # 베이스 이미지는 다이제스트로 고정한다. 태그는 사람이 읽기 위한 표기이고, 실제로 받는 것은 다이제스트가 정한다.
 # 다이제스트는 amd64·arm64 매니페스트를 함께 가리키는 인덱스 값이라 로컬(arm64)과 러너(amd64)에서 같은 줄을 쓴다.
