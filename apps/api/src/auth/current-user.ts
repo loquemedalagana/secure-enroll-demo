@@ -1,0 +1,14 @@
+import { type ExecutionContext, createParamDecorator } from '@nestjs/common';
+import type { Request } from 'express';
+import type { Role } from '../generated/prisma/client.js';
+
+// 인증 Guard가 요청에 붙이는 사용자 정보. id는 토큰에서, role은 그 요청 시점의 DB에서 온다.
+export type AuthUser = { id: string; role: Role };
+export type AuthedRequest = Request & { user?: AuthUser };
+
+export const CurrentUser = createParamDecorator((_data: unknown, context: ExecutionContext): AuthUser => {
+  const user = context.switchToHttp().getRequest<AuthedRequest>().user;
+  // 인증 Guard를 거치지 않은 경로에서 쓰면 여기서 멈춘다(500).
+  if (!user) throw new Error('CurrentUser를 인증되지 않은 경로에서 사용했습니다.');
+  return user;
+});
