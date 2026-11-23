@@ -34,11 +34,11 @@ git checkout v2-defect-N                  # 결함 상태 재현 (이 상태에�
 
 ## 3. 결함 목록
 
-모두 이 데모의 도메인(세미나 신청: 강의, 신청, 학생·강사·관리자)으로 씁니다. 분류는 OWASP Top 10 2021과 CWE 기준입니다.
+모두 이 데모의 도메인(세미나 신청: 강의, 신청, 학생·강사·관리자)으로 씁니다. 분류는 OWASP Top 10 2025와 CWE 기준입니다.
 
 ### 결함 1. 경로 문자열로 공개 경로를 열어 인증을 건너뜀
 
-- **분류**: A07 Identification and Authentication Failures / CWE-306 (중요 기능의 인증 누락)
+- **분류**: A07 Authentication Failures / CWE-306 (중요 기능의 인증 누락)
 - **어떻게 생기는가**: 강의 목록(`GET /courses`)을 로그인 없이 보여 주려고, 인증 Guard(`apps/api/src/auth/auth.guard.ts`)에 "경로가 `/courses`로 시작하면 통과"라는 조건을 넣습니다. 같은 접두사를 가진 수강생 명단(`GET /courses/:id/enrollments`)까지 인증 없이 열립니다.
 - **왜 위험한가**: 수강생 명단에는 전화번호가 있습니다. 공개 여부가 핸들러가 아니라 문자열 비교에 달려 있어서, 그 접두사 아래에 경로를 추가할 때마다 인증 없이 열립니다.
 - **수정 방향**: 공개 여부는 핸들러에 붙인 `@Public`만으로 판단합니다. Guard에서 경로 문자열 비교를 없앱니다.
@@ -56,7 +56,7 @@ git checkout v2-defect-N                  # 결함 상태 재현 (이 상태에�
 
 ### 결함 3. 요청 로그에 토큰과 비밀번호가 남음
 
-- **분류**: A09 Security Logging and Monitoring Failures / CWE-532 (로그 파일에 민감 정보 기록)
+- **분류**: A09 Security Logging and Alerting Failures / CWE-532 (로그 파일에 민감 정보 기록)
 - **어떻게 생기는가**: 요청 로그를 남기는 코드가 요청 헤더와 본문을 그대로 출력합니다. `Authorization` 헤더의 토큰과 `POST /auth/login` 본문의 비밀번호가 로그에 들어갑니다.
 - **왜 위험한가**: 로그는 앱보다 넓은 범위에서 읽히고 오래 보관됩니다. 로그를 읽을 수 있는 사람이 만료 전의 토큰으로 그 사용자의 요청을 보낼 수 있습니다.
 - **수정 방향**: 로그 한 줄에 들어가는 필드를 한 곳에서 정하고, 헤더와 본문은 넣지 않습니다. 필드는 요청 id, 사용자 id, 메서드, 경로, 인가 결과, 상태 코드, 처리 시간입니다.
@@ -65,7 +65,7 @@ git checkout v2-defect-N                  # 결함 상태 재현 (이 상태에�
 
 ### 결함 4. 토큰을 브라우저 스크립트가 읽을 수 있는 곳에 보관
 
-- **분류**: A05 Security Misconfiguration / CWE-1004 (HttpOnly 없는 민감 쿠키)
+- **분류**: A02 Security Misconfiguration / CWE-1004 (HttpOnly 없는 민감 쿠키)
 - **어떻게 생기는가**: 웹(`apps/web`)의 로그인 경로가 토큰 쿠키를 `httpOnly` 없이 설정합니다. 페이지의 스크립트가 `document.cookie`로 토큰을 읽을 수 있습니다.
 - **왜 위험한가**: 스크립트 삽입(XSS)이 한 번 일어나면 토큰이 밖으로 나갑니다. 토큰은 만료 전까지 API에 그대로 쓸 수 있습니다.
 - **수정 방향**: 토큰은 `httpOnly`, `SameSite=Lax` 쿠키로만 보관하고, 운영 환경에서는 `Secure`를 붙입니다. 브라우저 쪽 코드는 토큰을 읽거나 저장하지 않습니다. [결정 기록](decisions.md) 2번의 전제입니다.
