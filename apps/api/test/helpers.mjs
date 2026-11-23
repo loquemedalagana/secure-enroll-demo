@@ -3,14 +3,15 @@
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 
-if (!process.env.DATABASE_URL && existsSync('.env')) process.loadEnvFile('.env');
+if ((!process.env.DATABASE_URL || !process.env.TOKEN_SECRET) && existsSync('.env')) process.loadEnvFile('.env');
 
 export const DATABASE_URL = process.env.DATABASE_URL;
-if (!DATABASE_URL) throw new Error('DATABASE_URL이 필요합니다. .env.example을 참고하세요.');
+export const TOKEN_SECRET = process.env.TOKEN_SECRET;
+if (!DATABASE_URL || !TOKEN_SECRET) throw new Error('DATABASE_URL과 TOKEN_SECRET이 필요합니다. .env.example을 참고하세요.');
 
 export async function startServer(port, env = {}) {
   const child = spawn(process.execPath, ['dist/main.js'], {
-    env: { PATH: process.env.PATH, DATABASE_URL, PORT: String(port), ...env },
+    env: { PATH: process.env.PATH, DATABASE_URL, TOKEN_SECRET, PORT: String(port), ...env },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   let output = '';

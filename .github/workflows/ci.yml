@@ -63,6 +63,8 @@ jobs:
           --health-retries 30
     env:
       DATABASE_URL: postgresql://enroll:dummy-ci-only@127.0.0.1:5432/enroll
+      # 토큰 서명 키. 러너 안에서만 쓰는 더미 값이다. 저장소 시크릿이 아니다.
+      TOKEN_SECRET: dummy-ci-only-token-secret-000000000
     defaults:
       run:
         working-directory: apps/api

@@ -2,7 +2,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import pg from 'pg';
-import { DATABASE_URL, runUntilExit, startServer } from './helpers.mjs';
+import { DATABASE_URL, TOKEN_SECRET, runUntilExit, startServer } from './helpers.mjs';
 
 let server;
 before(async () => {
@@ -61,9 +61,17 @@ test('응답 헤더에 프레임워크 이름이 없음', async () => {
 });
 
 test('DATABASE_URL이 없으면 시작을 거부함', async () => {
-  const { code } = await runUntilExit({ PORT: '4197' });
+  const { code } = await runUntilExit({ PORT: '4197', TOKEN_SECRET });
   assert.notEqual(code, 0);
   assert.notEqual(code, null);
+});
+
+test('TOKEN_SECRET이 없거나 32자보다 짧으면 시작을 거부함', async () => {
+  for (const env of [{}, { TOKEN_SECRET: 'too-short' }]) {
+    const { code } = await runUntilExit({ PORT: '4197', DATABASE_URL, ...env });
+    assert.notEqual(code, 0);
+    assert.notEqual(code, null);
+  }
 });
 
 test('시드: 사용자 5, 강의 2, 신청 3이고 비밀번호는 해시로만 저장됨', async () => {
