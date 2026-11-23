@@ -1,0 +1,18 @@
+# 로컬 개발·테스트용 PostgreSQL. 값은 모두 더미이고 로컬 주소(127.0.0.1)에만 연다.
+# 사용: docker compose up -d --wait   /   정리: docker compose down -v
+services:
+  db:
+    # 태그는 사람이 읽기 위한 표기이고, 실제로 받는 이미지는 다이제스트가 정한다(amd64·arm64 공통 인덱스).
+    image: postgres:18.7-alpine3.24@sha256:0115267ab5a509022df9319c77be365cef335adb71556c75f60f5360ee247e71
+    environment:
+      POSTGRES_USER: enroll
+      POSTGRES_PASSWORD: dummy-local-only
+      POSTGRES_DB: enroll
+    ports:
+      # 호스트에 이미 PostgreSQL이 있어도 겹치지 않게 5433을 쓴다.
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U enroll -d enroll"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
