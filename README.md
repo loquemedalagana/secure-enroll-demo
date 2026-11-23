@@ -5,7 +5,7 @@
 > ⚠️ **교육용 데모입니다. 인가 결함을 의도적으로 포함한 브랜치(`vulnerable`)가 있으며, 운영 환경 사용·배포 금지입니다. 로컬에서만 실행하세요.**
 > 모든 사용자·데이터·시크릿은 더미이며, 특정 회사나 서비스의 코드와 무관합니다.
 
-`main`은 v2(웹·API·DB 분리)로 구조를 바꾸고 있습니다. 아래 설명은 v1 기준이며, v1의 마지막 상태는 [`v1.4` 태그](https://github.com/loquemedalagana/secure-enroll-demo/tree/v1.4)에서 볼 수 있습니다. 앱 코드는 `apps/web`으로 옮겼고, `apps/api`에 Nest.js API를 만들고 있습니다(현재 헬스 체크와 DB 구성까지). 설계 결정은 [docs/decisions.md](docs/decisions.md)에 적습니다.
+`main`은 v2(웹·API·DB 분리)로 구조를 바꾸고 있습니다. 아래 설명은 v1 기준이며, v1의 마지막 상태는 [`v1.4` 태그](https://github.com/loquemedalagana/secure-enroll-demo/tree/v1.4)에서 볼 수 있습니다. 앱 코드는 `apps/web`으로 옮겼고, `apps/api`에 Nest.js API를 만들고 있습니다(현재 헬스 체크와 DB 구성까지). 설계 결정은 [docs/decisions.md](docs/decisions.md)에 적습니다. v2에서 다룰 결함 목록과 다루는 방법은 [docs/v2-defects.md](docs/v2-defects.md)에 있습니다.
 
 API를 로컬에서 실행하려면 Docker와 Node 24가 필요합니다.
 ```bash
@@ -36,6 +36,12 @@ npm start                          # http://127.0.0.1:4000/health/ready
 ```bash
 git diff vulnerable fixed -- app lib middleware.ts   # 인가 구조가 어떻게 바뀌었는지
 git diff vulnerable fixed -- tests                   # 무엇으로 검증했는지
+```
+
+v2의 결함은 결함마다 태그 한 쌍으로 봅니다(태그는 결함을 다룬 뒤에 생깁니다).
+```bash
+git diff v2-defect-N v2-fix-N -- apps                # 결함 N을 어떻게 고쳤는지
+git checkout v2-defect-N                             # 결함 N의 상태 재현
 ```
 
 ## 의도된 결함 (vulnerable)
