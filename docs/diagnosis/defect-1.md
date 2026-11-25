@@ -86,7 +86,17 @@ flowchart LR
   g1 -. "401" .-> out1(["거부"])
   req2 --> h2
   h2 --> out2(["200 · 전체 신청 3건"])
+
+  classDef safe fill:#E1F5EE,stroke:#0F6E56,color:#04342C
+  classDef danger fill:#FCEBEB,stroke:#A32D2D,color:#501313
+  class g1,g2,out1 safe
+  class h2,out2 danger
+  style c1 fill:none,stroke:#0F6E56
+  style c2 fill:none,stroke:#A32D2D,stroke-dasharray:4 3
+  linkStyle 4,5 stroke:#A32D2D,stroke-width:2px
 ```
+
+초록은 검사가 이루어지는 곳, 빨강은 검사 없이 지나가는 곳입니다.
 
 - Guard를 전역으로 등록하지 않고 컨트롤러마다 `@UseGuards(AuthGuard, AuthzGuard)`로 붙입니다(`apps/api/src/auth/auth.controller.ts`, `apps/api/src/enrollments/enrollments.controller.ts`).
 - 관리자 컨트롤러(`apps/api/src/enrollments/admin.controller.ts`)에는 `@UseGuards`가 없습니다.

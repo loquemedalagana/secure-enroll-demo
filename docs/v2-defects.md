@@ -28,7 +28,16 @@ flowchart LR
   a["1 구현<br/>결함이 든 기능"] --> b["2 확인<br/>재현, 진단 보고서"] --> c["3 테스트<br/>로컬·CI 실패"] --> d["4 수정<br/>로컬·CI 통과"] --> e(["PR 병합<br/>main은 수정된 상태"])
   a -.- t1[["태그 v2-defect-N"]]
   d -.- t2[["태그 v2-fix-N"]]
+
+  classDef safe fill:#E1F5EE,stroke:#0F6E56,color:#04342C
+  classDef danger fill:#FCEBEB,stroke:#A32D2D,color:#501313
+  classDef check fill:#FAEEDA,stroke:#854F0B,color:#412402
+  class a,c,t1 danger
+  class b check
+  class d,e,t2 safe
 ```
+
+빨강은 결함이 있는 상태, 초록은 수정된 상태입니다.
 
 - 결함은 그 결함이 들어갈 기능을 만드는 브랜치에서 다룹니다.
 - PR은 3번에서 초안으로 열고, 4번 뒤에 병합합니다. 그래서 PR의 커밋 목록에 테스트 커밋의 CI 실패와 수정 커밋의 CI 통과가 차례로 남습니다.
