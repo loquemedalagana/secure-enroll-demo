@@ -68,6 +68,26 @@ node .github/scripts/defects/defect-1.mjs
 
 ## 3. 원인
 
+같은 "토큰 없는 요청"이 컨트롤러에 따라 다르게 처리됩니다.
+
+```mermaid
+flowchart LR
+  req1(["GET /enrollments/e2<br/>토큰 없음"])
+  req2(["GET /admin/enrollments<br/>토큰 없음"])
+
+  subgraph c1["EnrollmentsController · @UseGuards 있음"]
+    g1["인증 Guard"] --> g2["인가 Guard<br/>can() 호출"] --> h1["핸들러"]
+  end
+  subgraph c2["AdminController · @UseGuards 없음"]
+    h2["핸들러<br/>@Authorize는 붙어 있지만<br/>읽는 Guard가 없음"]
+  end
+
+  req1 --> g1
+  g1 -. "401" .-> out1(["거부"])
+  req2 --> h2
+  h2 --> out2(["200 · 전체 신청 3건"])
+```
+
 - Guard를 전역으로 등록하지 않고 컨트롤러마다 `@UseGuards(AuthGuard, AuthzGuard)`로 붙입니다(`apps/api/src/auth/auth.controller.ts`, `apps/api/src/enrollments/enrollments.controller.ts`).
 - 관리자 컨트롤러(`apps/api/src/enrollments/admin.controller.ts`)에는 `@UseGuards`가 없습니다.
 - 핸들러에는 `@Authorize('admin:read')`가 붙어 있지만, 이것은 인가 Guard가 읽는 표시일 뿐입니다. Guard가 돌지 않으면 아무도 읽지 않습니다.
