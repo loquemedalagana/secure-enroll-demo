@@ -1,8 +1,8 @@
-// can() 단위 테스트: 역할 × 행위 × 소유 여부. v1(apps/web/tests/policy.test.mjs)의 16건과 같은 경우를 검사한다.
+// can() 단위 테스트: 역할 × 행위 × 소유 여부. 앞의 16건은 v1(apps/web/tests/policy.test.mjs)과 같은 경우이고, 뒤의 5건은 API에 새로 생긴 행위다.
 // 빌드한 결과물(dist/authz/policy.js)을 직접 불러온다.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { can } from '../dist/authz/policy.js';
+import { can, enrollmentScope } from '../dist/authz/policy.js';
 
 const student = { id: 'u1', role: 'student' };
 const instructor = { id: 'i1', role: 'instructor' };
@@ -29,8 +29,21 @@ const cases = [
   ['알 수 없는 역할', { id: 'x', role: 'guest' }, 'enrollment:read', mine, false],
   ['알 수 없는 행위', admin, 'enrollment:delete', mine, false],
   ['id가 소유자·강사와 다른 student가 강사 id만 일치', { id: 'i1', role: 'student' }, 'enrollment:read', mine, false],
+  // API에 새로 생긴 행위
+  ['비로그인 → 신청 목록', null, 'enrollment:list', undefined, false],
+  ['student → 신청 목록(범위는 enrollmentScope가 정함)', student, 'enrollment:list', undefined, true],
+  ['알 수 없는 역할 → 신청 목록', { id: 'x', role: 'guest' }, 'enrollment:list', undefined, false],
+  ['student → 자기 정보', student, 'self:read', undefined, true],
+  ['비로그인 → 자기 정보', null, 'self:read', undefined, false],
 ];
 
 for (const [name, user, action, resource, expected] of cases) {
   test(`정책: ${name}`, () => assert.equal(can(user, action, resource), expected));
 }
+
+test('정책: 목록 범위는 학생은 자기 신청, 강사는 자기 강의, 관리자는 전체, 그 밖의 역할은 없음', () => {
+  assert.deepEqual(enrollmentScope(student), { userId: 'u1' });
+  assert.deepEqual(enrollmentScope(instructor), { course: { instructorId: 'i1' } });
+  assert.deepEqual(enrollmentScope(admin), {});
+  assert.equal(enrollmentScope({ id: 'x', role: 'guest' }), null);
+});
