@@ -15,7 +15,7 @@
 | 구성 | 위치 | 상태 |
 |---|---|---|
 | 웹 (Next.js 14) | `apps/web` | v1의 앱 그대로입니다. 인메모리 데이터로 동작하고 아직 API를 호출하지 않습니다 |
-| API (Nest.js 12) | `apps/api` | 헬스 체크, 로그인, 토큰 발급·검증, 전역 인증·인가 Guard, 신청 조회, 강의 목록과 수강생 명단, 요청 로그. 테스트 87건 |
+| API (Nest.js 12) | `apps/api` | 헬스 체크, 로그인, 토큰 발급·검증, 전역 인증·인가 Guard, 신청 조회, 강의 목록과 수강생 명단, 요청 로그. 테스트 92건 |
 | DB (PostgreSQL 18) | `compose.yaml`, `apps/api/prisma` | Prisma 마이그레이션과 더미 시드 |
 | CI | `.github/workflows/ci.yml` | `web`, `api`, `audit`(앱별), `netpol` |
 | 네트워크 정책 | `k8s/` | kind와 Cilium으로 웹 앱에 적용해 검증 |
@@ -91,7 +91,7 @@ cp .env.example .env
 npm ci --ignore-scripts
 npm run db:generate && npm run build
 npm run db:migrate && npm run db:seed
-npm test                           # 87건
+npm test                           # 92건
 npm start                          # http://127.0.0.1:4000/health/ready
 ```
 
