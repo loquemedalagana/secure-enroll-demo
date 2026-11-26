@@ -38,12 +38,12 @@ finish(
   [
     { request: 'POST /auth/login (student1)', result: `상태 ${login.status}` },
     { request: 'GET /auth/me (받은 토큰)', result: `상태 ${me.status}` },
-    { request: `서버 로그에 새로 쓰인 줄: ${lines.length}줄`, result: `비밀번호 ${found(withPassword)} · 토큰 ${found(withToken)}` },
+    { request: `서버 로그에 추가된 줄: ${lines.length}줄`, result: `비밀번호 ${found(withPassword)} · 토큰 ${found(withToken)}` },
   ],
-  // 요청 두 번으로 새로 쓰인 줄에 비밀번호나 토큰이 있으면 취약이다. 요청이 기록되지 않았으면 판정할 수 없다.
+  // 요청 두 번으로 추가된 줄에 비밀번호나 토큰이 있으면 취약이다. 요청이 기록되지 않았으면 판정할 수 없다.
   withPassword > 0 || withToken > 0,
 );
 if (lines.length === 0) {
-  console.error('로그에 새로 쓰인 줄이 없습니다. 로그 파일 경로가 맞는지 확인하세요.');
+  console.error('로그에 추가된 줄이 없습니다. 로그 파일 경로가 맞는지 확인하세요.');
   process.exit(2);
 }
