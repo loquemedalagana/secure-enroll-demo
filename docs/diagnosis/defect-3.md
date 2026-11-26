@@ -7,7 +7,7 @@
 | 분류 | OWASP Top 10 2025 A09 Security Logging and Alerting Failures / CWE-532 (로그 파일에 민감 정보 기록) |
 | 위험도 | 중간 |
 | 해당 구성 요소 | 주체의 자격 증명(비밀번호, 토큰). 시행 지점(PEP)과 판단(PE)은 정상으로 동작하고, 인증에 쓰인 값이 로그로 나갑니다 |
-| 상태 | 결함 확인. 조치 전 |
+| 상태 | 조치 완료 (`v2-fix-3`) |
 
 ## 1. 요약
 
@@ -302,11 +302,90 @@ flowchart LR
 
 ### 4.2 적용한 조치
 
-작성 전. 수정 커밋(`v2-fix-3`) 뒤에 적습니다.
+방안 2를 커밋 두 개로 나눠 적용했습니다. 첫 커밋이 결함을 막고, 둘째 커밋은 로그에 무엇이 들어가는지를 한 곳에서 정하게 합니다.
+
+| 커밋 | 바꾼 것 | 달라지는 것 |
+|---|---|---|
+| 인증 Guard와 로그인 핸들러의 출력 삭제 | `auth/auth.guard.ts`와 `auth/auth.controller.ts`에서 출력 두 줄을 지움 | 서버 로그에 토큰과 비밀번호가 남지 않음. 실패하던 테스트 2건이 통과 |
+| 요청 로그를 정해진 필드의 JSON 한 줄로 바꿈 | [`common/request-log.ts` 7~15행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-fix-3/apps/api/src/common/request-log.ts#L7-L15): 필드를 타입 하나로 정함 | 로그가 JSON 한 줄이 됨. 쿼리 문자열이 빠지고 사용자 id가 들어감 |
+
+수정 뒤에 요청 하나가 처리되는 순서와 로그 한 줄이 만들어지는 때입니다.
+
+```mermaid
+flowchart LR
+  req(["GET /auth/me<br/>헤더에 토큰"])
+
+  subgraph api["API"]
+    direction LR
+    l1["요청 로그 ①<br/>시작 시각과<br/>요청 id를 기억<br/>응답이 끝나면<br/>실행할 함수를 등록"]
+    a["인증 Guard<br/>토큰을 검증하고<br/>사용자를 확인해<br/>요청에 붙여 둠"]
+    z["인가 Guard<br/>can()을 호출"]
+    h["핸들러"]
+    l2["요청 로그 ②<br/>응답이 끝나면<br/>①에서 등록한<br/>함수가 실행됨"]
+    l1 --> a --> z --> h --> l2
+  end
+
+  log[("서버 로그")]
+  res(["200 응답"])
+
+  req --> l1
+  h --> res
+  l2 -- "JSON 한 줄<br/>time, id, method,<br/>path, status, ms, uid" --> log
+
+  classDef safe fill:#E1F5EE,stroke:#0F6E56,color:#04342C
+  classDef check fill:#FAEEDA,stroke:#854F0B,color:#412402
+  class a,z safe
+  class l1,l2 check
+  style api fill:none,stroke:#57606a,stroke-dasharray:4 3
+```
+
+노랑은 요청 로그, 초록은 검사입니다. 요청 로그는 요청이 들어올 때(①)와 응답이 끝날 때(②) 두 번 일하고, 서버 로그에 쓰는 것은 ②의 한 줄뿐입니다.
+
+- 응답이 끝난 뒤에 쓰는 이유는 상태 코드, 걸린 시간, 사용자를 그때 알 수 있기 때문입니다. Guard가 401이나 403으로 거부해도 응답은 끝나므로 거부된 요청도 한 줄이 남습니다.
+- 로그의 `uid`는 토큰에서 바로 읽은 값이 아닙니다. 인증 Guard가 서명과 만료를 검증하고 DB에서 사용자를 확인한 뒤 요청에 붙여 둔 값입니다. 검증에 실패한 요청과 `@Public` 경로의 요청에는 `uid`가 없습니다.
+
+로그 한 줄의 예입니다.
+
+```json
+{"time":"2026-11-26T09:52:57.261Z","id":"8f9e2e0e-a94e-494c-a56d-4030604bae33","method":"GET","path":"/auth/me","status":200,"ms":2,"uid":"u1"}
+```
 
 ## 5. 조치 뒤 재확인
 
-작성 전. `v2-fix-3`에서 2절과 같은 요청을 다시 보낸 결과를 적습니다.
+`v2-fix-3`을 로컬에서 띄우고 2절과 같은 스크립트를 실행한 결과입니다.
+
+```bash
+node .github/scripts/defects/defect-3.mjs /tmp/api.log --expect blocked
+```
+
+```
+결함 3: 서버 로그의 비밀번호와 토큰
+- POST /auth/login (student1)
+    → 상태 200
+- GET /auth/me (받은 토큰)
+    → 상태 200
+- 서버 로그에 추가된 줄: 2줄
+    → 비밀번호 없음 · 토큰 없음
+판정: 차단
+```
+
+추가된 줄이 4줄에서 2줄로 줄었습니다. 그 두 줄입니다.
+
+```json
+{"time":"...","id":"...","method":"POST","path":"/auth/login","status":200,"ms":91}
+{"time":"...","id":"...","method":"GET","path":"/auth/me","status":200,"ms":2,"uid":"u1"}
+```
+
+| 확인 | 결함 상태 (`v2-defect-3`) | 조치 뒤 (`v2-fix-3`) |
+|---|---|---|
+| 로그에 비밀번호 | 있음 | 없음 |
+| 로그에 토큰 | 있음 | 없음 |
+| `GET /courses?q=probe-query-value` 뒤 로그에 그 값 | 있음 | 없음 |
+| 누가 한 요청인지 | 알 수 없음 | `uid` |
+| 응답 | 정상 | 정상 (바뀐 것 없음) |
+| API 테스트 | 87건 중 2건 실패 | 87건 통과 |
+
+실패하던 2건은 3.4절의 테스트 1과 2입니다. 테스트 2는 유효한 토큰과 검증에 실패한 토큰을 둘 다 확인하는데, 결함 상태에서는 유효한 토큰에서 먼저 멈췄습니다. 조치 뒤에는 두 검사를 모두 통과합니다.
 
 ## 6. Burp Suite 진단 기록
 
