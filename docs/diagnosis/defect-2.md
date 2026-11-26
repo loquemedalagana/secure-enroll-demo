@@ -317,6 +317,47 @@ flowchart LR
 - 세 방안 모두 수강생 명단을 막고, 테스트 76건을 통과합니다. 가도 결함을 고칩니다.
 - 가에서는 같은 핸들러로 가는 요청인데 주소의 글자에 따라 답이 갈립니다. 서버는 `/courses/`와 `/Courses`를 강의 목록 핸들러로 보내는데(끝의 `/`와 대소문자를 구분하지 않습니다), 글자 비교는 이것을 다른 주소로 봅니다. 이번에는 막히는 쪽으로 어긋났습니다. 결함 상태의 `/Courses` 401도 같은 이유입니다.
 
+같은 요청(`GET /courses/`, 토큰 없음)을 가와 나가 처리하는 순서입니다.
+
+```mermaid
+flowchart TB
+  subgraph A["가 · 주소의 글자를 Guard가 다시 비교"]
+    direction LR
+    a0(["GET /courses/"])
+    a1["서버가 주소를 해석<br/>끝의 / 는 무시"]
+    a2["강의 목록 핸들러"]
+    a3{{"Guard<br/>'/courses/' 와 '/courses' 가<br/>같은 글자인가"}}
+    a4(["401"])
+    a0 --> a1 --> a2
+    a0 --> a3
+    a3 -- "아니오" --> a4
+  end
+
+  subgraph B["나 · 서버가 고른 핸들러의 표시를 Guard가 읽음"]
+    direction LR
+    b0(["GET /courses/"])
+    b1["서버가 주소를 해석<br/>끝의 / 는 무시"]
+    b2["강의 목록 핸들러<br/>@Public"]
+    b3{{"Guard<br/>이 핸들러에<br/>@Public 이 있는가"}}
+    b4(["200"])
+    b0 --> b1 --> b2 --> b3
+    b3 -- "예" --> b4
+  end
+
+  A ~~~ B
+
+  classDef safe fill:#E1F5EE,stroke:#0F6E56,color:#04342C
+  classDef danger fill:#FCEBEB,stroke:#A32D2D,color:#501313
+  classDef check fill:#FAEEDA,stroke:#854F0B,color:#412402
+  class a1,a2,b1,b2,b4 safe
+  class a4 danger
+  class a3,b3 check
+  style A fill:none,stroke:#A32D2D,stroke-dasharray:4 3
+  style B fill:none,stroke:#0F6E56
+```
+
+가에서는 서버와 Guard가 같은 주소를 각자 해석하고, 두 해석이 다릅니다. 나에서는 서버만 주소를 해석하고, Guard는 그 결과로 정해진 핸들러의 표시를 읽습니다. 노랑은 Guard가 묻는 질문입니다.
+
 #### 비교
 
 | 기준 | 가 (같으면) | 나 (`@Public`만) | 다 (목록) |
