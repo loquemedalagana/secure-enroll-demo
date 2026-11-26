@@ -105,7 +105,7 @@ flowchart LR
 
 ### 3.1 결함을 잡는 테스트
 
-`apps/api/test/guard-coverage.test.mjs`에 테스트 3건을 넣었습니다. 요청이 핸들러에 닿기 전에 Guard가 묻는 것은 세 가지이고, 테스트는 각각 다른 자리를 지킵니다.
+`apps/api/test/guard-coverage.test.mjs`에 테스트 3건을 넣었습니다. 요청이 핸들러에 도달하기 전에 Guard가 묻는 것은 세 가지이고, 테스트는 각각 다른 자리를 지킵니다.
 
 ```mermaid
 flowchart LR
