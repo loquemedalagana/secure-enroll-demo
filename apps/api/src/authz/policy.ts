@@ -1,7 +1,7 @@
 import type { AuthUser } from '../auth/current-user.js';
 
 // 인가 판단은 여기 한 곳에서만 한다. 명시적으로 허용한 경우 외에는 거부한다.
-// v1(apps/web/lib/policy.ts)의 규칙을 그대로 옮기고, API에 새로 생긴 행위 둘을 더했다.
+// v1(apps/web/lib/policy.ts)의 규칙을 그대로 옮기고, API에 새로 생긴 행위 셋을 더했다.
 //
 // 규칙은 두 종류다.
 // - 역할 규칙: 사용자의 역할만 본다. (관리자 목록은 admin만)
@@ -9,11 +9,13 @@ import type { AuthUser } from '../auth/current-user.js';
 export type Action =
   | 'enrollment:read' // 신청 한 건 조회
   | 'enrollment:list' // 자기가 볼 수 있는 신청 목록
+  | 'roster:read' // 강의 하나의 수강생 명단
   | 'admin:read' // 전체 신청 목록
   | 'self:read'; // 자기 id와 역할
 
 // 신청의 소유자(ownerId)와 그 강의의 담당 강사(instructorId). 호출하는 쪽이 DB에서 읽어 채운다.
-export type Resource = { ownerId: string; instructorId: string };
+// 대상이 강의이면 소유자가 없으므로 instructorId만 채운다.
+export type Resource = { ownerId?: string; instructorId: string };
 
 const ROLES: readonly string[] = ['student', 'instructor', 'admin'];
 
@@ -33,6 +35,11 @@ export function can(user: AuthUser | null, action: Action, resource?: Resource):
       if (user.role === 'student') return resource.ownerId === user.id;
       if (user.role === 'instructor') return resource.instructorId === user.id;
       return false;
+    case 'roster:read':
+      // 명단에는 그 강의 수강생 전원의 전화번호가 있다. 학생에게는 주지 않는다.
+      if (user.role === 'admin') return true;
+      if (!resource) return false;
+      return user.role === 'instructor' && resource.instructorId === user.id;
     default:
       return false;
   }

@@ -1,4 +1,4 @@
-// can() 단위 테스트: 역할 × 행위 × 소유 여부. 앞의 16건은 v1(apps/web/tests/policy.test.mjs)과 같은 경우이고, 뒤의 5건은 API에 새로 생긴 행위다.
+// can() 단위 테스트: 역할 × 행위 × 소유 여부. 앞의 16건은 v1(apps/web/tests/policy.test.mjs)과 같은 경우이고, 뒤의 11건은 API에 새로 생긴 행위다.
 // 빌드한 결과물(dist/authz/policy.js)을 직접 불러온다.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -35,6 +35,13 @@ const cases = [
   ['알 수 없는 역할 → 신청 목록', { id: 'x', role: 'guest' }, 'enrollment:list', undefined, false],
   ['student → 자기 정보', student, 'self:read', undefined, true],
   ['비로그인 → 자기 정보', null, 'self:read', undefined, false],
+  // 수강생 명단. 대상은 강의이고 담당 강사만 채운다.
+  ['비로그인 → 명단', null, 'roster:read', { instructorId: 'i1' }, false],
+  ['student → 명단(자기가 신청한 강의여도 거부)', student, 'roster:read', { instructorId: 'i1' }, false],
+  ['instructor → 자기 강의 명단', instructor, 'roster:read', { instructorId: 'i1' }, true],
+  ['instructor → 다른 강사 강의 명단', instructor, 'roster:read', { instructorId: 'i2' }, false],
+  ['instructor → 명단, 리소스 없음', instructor, 'roster:read', undefined, false],
+  ['admin → 명단', admin, 'roster:read', { instructorId: 'i2' }, true],
 ];
 
 for (const [name, user, action, resource, expected] of cases) {
