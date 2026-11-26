@@ -86,6 +86,20 @@ test('서버 출력에 비밀번호와 토큰 값이 없음', async () => {
   assert.ok(!output.includes(token));
 });
 
+// 결함 3(docs/v2-defects.md)을 잡는다. 위의 테스트는 받은 토큰을 다시 보내지 않아서 토큰 쪽을 확인하지 못한다.
+test('서버 출력에 요청으로 받은 토큰 값이 없음 (유효한 토큰, 틀린 토큰)', async () => {
+  const valid = await tokenFor('student1');
+  assert.equal((await me(`Bearer ${valid}`)).status, 200);
+  // 검증에 실패한 토큰도 로그에 남으면 안 된다. 다른 테스트와 겹치지 않는 값을 쓴다.
+  const wrong = 'bG9nLWNoZWNrLXdyb25nLXRva2Vu.bm90LWEtcmVhbC1zaWduYXR1cmU';
+  assert.equal((await me(`Bearer ${wrong}`)).status, 401);
+
+  const output = server.output();
+  // 실패 문구에 토큰 값이 찍히지 않도록 문구를 직접 준다.
+  assert.ok(!output.includes(valid), '유효한 토큰이 서버 출력에 있습니다');
+  assert.ok(!output.includes(wrong), '검증에 실패한 토큰이 서버 출력에 있습니다');
+});
+
 // ---- 전역 인증 Guard ----
 
 async function tokenFor(username) {
