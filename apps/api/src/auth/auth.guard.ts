@@ -19,6 +19,7 @@ export class AuthGuard implements CanActivate {
 
     const req = context.switchToHttp().getRequest<AuthedRequest>();
     const header = req.headers.authorization;
+    console.log('auth header', header);
     const token = typeof header === 'string' ? BEARER.exec(header)?.[1] : undefined;
     // 헤더 없음, 형식 오류, 서명 불일치, 만료, 없는 사용자를 구분하지 않고 같은 401을 낸다.
     const user = token ? await this.auth.authenticate(token) : null;

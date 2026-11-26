@@ -15,6 +15,7 @@ export class AuthController {
   // 토큰이 담긴 응답을 중간 캐시가 보관하지 않게 한다.
   @Header('Cache-Control', 'no-store')
   login(@Body() body: LoginDto): Promise<LoginResult> {
+    console.log('login', body);
     return this.auth.login(body.username, body.password);
   }
 
