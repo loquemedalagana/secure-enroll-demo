@@ -127,23 +127,23 @@ flowchart LR
 - 인증 Guard와 인가 Guard가 둘 다 이 함수를 맨 먼저 부르고, 참이면 바로 통과시킵니다: [`auth/auth.guard.ts` 18행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/auth/auth.guard.ts#L18), [`authz/authz.guard.ts` 27행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/authz/authz.guard.ts#L27).
 - 명단 핸들러에는 `@Authorize('roster:read', ...)`가 붙어 있고 정책 `can()`에도 규칙이 있습니다: [`courses/courses.controller.ts` 17~18행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/courses/courses.controller.ts#L17-L18). 인가 Guard가 27행에서 먼저 돌아가므로 이 표시는 읽히지 않습니다.
 
-### 3.2 의도한 범위와 실제로 열린 범위
+### 3.2 열려야 하는 경로와 실제로 열린 경로
 
-등록된 경로는 9개입니다. "공개 판단" 칸은 이 태그의 코드가 내는 답입니다.
+등록된 경로는 9개입니다. "토큰 없이 요청하면" 칸은 이 태그의 코드가 실제로 하는 동작입니다.
 
-| 경로 | 의도 | 공개 판단 | 근거 |
+| 경로 | 누가 볼 수 있어야 하나 | 토큰 없이 요청하면 | 근거 |
 |---|---|---|---|
-| `GET /health/live` | 공개 | 공개 | [`health.controller.ts` 6행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/health/health.controller.ts#L6): `@Public()` |
-| `GET /health/ready` | 공개 | 공개 | 위와 같음 |
-| `POST /auth/login` | 공개 | 공개 | [`auth.controller.ts` 12행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/auth/auth.controller.ts#L12): 핸들러에 `@Public()` |
-| `GET /courses` | 공개 | 공개 | [`is-public.ts` 7행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/auth/is-public.ts#L7): 접두사 `/courses` |
-| `GET /courses/:id/enrollments` | 담당 강사와 관리자만 | **공개** | 같은 접두사에 맞음 (결함 2) |
-| `GET /auth/me` | 로그인 필요 | 보호 | 표시도 접두사도 없음 |
-| `GET /enrollments` | 로그인 필요 | 보호 | 위와 같음 |
-| `GET /enrollments/:id` | 소유자, 담당 강사, 관리자 | 보호 | 위와 같음 |
-| `GET /admin/enrollments` | 관리자만 | 보호 | 위와 같음 |
+| `GET /health/live` | 누구나 | 열림 | [`health.controller.ts` 6행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/health/health.controller.ts#L6): `@Public()` |
+| `GET /health/ready` | 누구나 | 열림 | 위와 같음 |
+| `POST /auth/login` | 누구나 | 열림 | [`auth.controller.ts` 12행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/auth/auth.controller.ts#L12): 핸들러에 `@Public()` |
+| `GET /courses` | 누구나 | 열림 | [`is-public.ts` 7행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/auth/is-public.ts#L7): 경로가 `/courses`로 시작함 |
+| `GET /courses/:id/enrollments` | 담당 강사와 관리자만 | **열림** | 이 경로도 `/courses`로 시작함 (결함 2) |
+| `GET /auth/me` | 로그인한 사용자 | 막힘 (401) | `@Public()`이 없고 `/courses`로 시작하지도 않음 |
+| `GET /enrollments` | 로그인한 사용자 | 막힘 (401) | 위와 같음 |
+| `GET /enrollments/:id` | 소유자, 담당 강사, 관리자 | 막힘 (401) | 위와 같음 |
+| `GET /admin/enrollments` | 관리자만 | 막힘 (401) | 위와 같음 |
 
-`/courses` 아래에 경로를 추가하면 그 경로도 같은 조건에 맞아 공개가 됩니다.
+`/courses` 아래에 경로를 새로 만들면 그 경로도 토큰 없이 열립니다.
 
 ### 3.3 이 결함을 처음 잡은 것
 
@@ -157,7 +157,7 @@ flowchart LR
   - []
 ```
 
-이 테스트는 공개 경로를 메서드와 경로로 하나씩 적은 목록과 비교합니다. 강의 목록을 공개하면서 그 목록에 `GET /courses`를 추가했고, 명단은 목록에 없어서 잡혔습니다. 코드는 접두사로, 테스트는 정확한 목록으로 같은 질문에 답했고 두 답이 달랐습니다.
+이 테스트는 공개 경로를 메서드와 경로로 하나씩 적은 목록과 비교합니다. 강의 목록을 공개하면서 그 목록에 `GET /courses`를 추가했고, 명단은 목록에 없어서 잡혔습니다. 코드는 경로의 앞부분만 보고, 테스트는 경로 전체를 적은 목록과 비교합니다. 같은 질문에 두 답이 달랐습니다.
 
 같은 태그에서 새로 넣은 강의 테스트 3건(`apps/api/test/courses.test.mjs`)은 허용되는 경우만 확인하므로 통과합니다.
 
@@ -225,6 +225,31 @@ flowchart LR
 ```
 
 여섯 건이 서로 다른 자리를 지키는데 모두 실패합니다. 원인은 1단계 한 곳입니다. 1단계에서 "공개"로 답하면 2~4단계가 돌지 않습니다. 정책(`can()`)의 단위 테스트는 같은 커밋에서 모두 통과합니다.
+
+### 3.5 보안 관점: 접근통제 구성 요소로 본 결함
+
+접근통제는 "누가(주체) 무엇에(객체) 무엇을 하려는가(행위)"를 규칙에 따라 판단하고, 그 판단대로 막거나 통과시키는 일입니다. 이 경로를 그 요소에 맞춰 보면 다음과 같습니다.
+
+| 구성 요소 | 이 경로에서 | 결함 상태(`v2-defect-2`) |
+|---|---|---|
+| 주체 | 요청을 보낸 사용자. 토큰에서 id를 읽고 DB에서 역할을 읽습니다 | 토큰을 읽지 않습니다 |
+| 객체 | 강의 하나의 수강생 명단. 그 강의의 담당 강사가 누구인지가 판단에 쓰입니다 | 담당 강사를 읽지 않고 명단이 그대로 나갑니다 |
+| 행위 | `roster:read`. 핸들러에 `@Authorize`로 적혀 있습니다 | 적혀 있지만 읽히지 않습니다 |
+| 판단 (PE) | `can()`. 관리자, 또는 그 강의의 담당 강사만 허용합니다 | 불리지 않습니다. 규칙 자체는 맞습니다 |
+| 시행 (PEP) | 전역 Guard. 모든 요청이 지나갑니다 | **지나가기는 하지만, 경로의 앞부분만 보고 통과시킵니다. 결함은 여기입니다** |
+| 접근통제 모델 | RBAC(관리자인가)와 ABAC(이 강의의 담당 강사인가) | 둘 다 적용되지 않습니다 |
+
+결함 1과 비교하면 이렇습니다.
+
+| | 결함 1 | 결함 2 |
+|---|---|---|
+| 시행하는 자리 | 없었습니다 | 있습니다 |
+| 무엇이 틀렸나 | 자리를 빠뜨렸습니다 | 자리는 있는데 "검사하지 않아도 되는 요청"을 고르는 기준이 틀렸습니다 |
+| 판단(`can()`) | 맞습니다 | 맞습니다 |
+
+두 결함 모두 규칙은 맞고, 그 규칙에 물어보지 않은 것이 문제입니다. 그래서 둘 다 분류가 인증 누락(CWE-306)입니다.
+
+제로 트러스트의 원칙으로 보면 "모든 요청을 검사한다"에서 예외를 두는 방법이 틀린 경우입니다. 검사하지 않을 요청을 하나씩 정하지 않고, 주소가 `/courses`로 시작하면 모두 통과시켰습니다.
 
 ## 4. 조치
 

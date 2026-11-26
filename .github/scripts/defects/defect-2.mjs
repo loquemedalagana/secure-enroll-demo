@@ -1,4 +1,4 @@
-// 결함 2 재현: 공개 여부를 경로의 앞부분으로 판단해서, 같은 접두사의 보호 경로가 인증·인가 없이 열리는지 본다.
+// 결함 2 재현: 로그인 없이 열지를 경로의 앞부분만 보고 정해서, 앞부분이 같은 수강생 명단까지 인증·인가 없이 열리는지 본다.
 // 보고서: docs/diagnosis/defect-2.md
 import { BASE, bearerFor, describe, finish, summarize } from './lib.mjs';
 
