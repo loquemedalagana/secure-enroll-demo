@@ -98,9 +98,9 @@ flowchart LR
 
 초록은 검사가 이루어지는 곳, 빨강은 검사 없이 지나가는 곳입니다.
 
-- Guard를 전역으로 등록하지 않고 컨트롤러마다 `@UseGuards(AuthGuard, AuthzGuard)`로 붙입니다(`apps/api/src/auth/auth.controller.ts`, `apps/api/src/enrollments/enrollments.controller.ts`).
-- 관리자 컨트롤러(`apps/api/src/enrollments/admin.controller.ts`)에는 `@UseGuards`가 없습니다.
-- 핸들러에는 `@Authorize('admin:read')`가 붙어 있지만, 이것은 인가 Guard가 읽는 표시일 뿐입니다. Guard가 돌지 않으면 아무도 읽지 않습니다.
+- Guard를 전역으로 등록하지 않고 컨트롤러마다 `@UseGuards(AuthGuard, AuthzGuard)`로 붙입니다([`auth/auth.controller.ts 10행`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/auth/auth.controller.ts#L10), [`enrollments/enrollments.controller.ts 8행`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/enrollments/enrollments.controller.ts#L8)).
+- 관리자 컨트롤러([`enrollments/admin.controller.ts 5행`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/enrollments/admin.controller.ts#L5))에는 `@UseGuards`가 없습니다.
+- 핸들러에는 `@Authorize('admin:read')`가 붙어 있지만([`11행`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/enrollments/admin.controller.ts#L11)), 이것은 인가 Guard가 읽는 표시일 뿐입니다. Guard가 돌지 않으면 아무도 읽지 않습니다.
 - 관리자로 로그인해서 확인하면 목록이 정상으로 나옵니다. 정상 경로만 검사하는 기존 테스트 59건은 이 상태에서 모두 통과합니다.
 
 ### 3.1 결함을 잡는 테스트
@@ -152,14 +152,14 @@ flowchart LR
 
 접근통제는 "누가(주체) 무엇에(객체) 무엇을 하려는가(행위)"를 규칙에 따라 판단하고, 그 판단대로 막거나 통과시키는 일입니다. 이 경로를 그 요소에 맞춰 보면 다음과 같습니다.
 
-| 구성 요소 | 이 경로에서 | 결함 상태(`v2-defect-1`) |
-|---|---|---|
-| 주체 | 요청을 보낸 사용자. 토큰에서 id를 읽고 DB에서 역할을 읽습니다 | 토큰을 읽지 않습니다. 누구인지 모르는 채로 응답합니다 |
-| 객체 | 전체 신청 목록(사용자 id, 강의 id, 전화번호) | 그대로 나갑니다 |
-| 행위 | `admin:read`. 핸들러에 `@Authorize`로 적혀 있습니다 | 적혀 있지만 읽는 곳이 없습니다 |
-| 판단 (PE) | `can()`. 관리자만 허용합니다 | 불리지 않습니다. 규칙 자체는 맞습니다 |
-| 시행 (PEP) | 인증 Guard와 인가 Guard | **이 경로에 없습니다. 결함은 여기입니다** |
-| 접근통제 모델 | RBAC. 역할만 보고 정합니다 | 적용되지 않습니다 |
+| 구성 요소 | 이 경로에서 | 결함 상태(`v2-defect-1`) | 코드에서 확인하는 곳 |
+|---|---|---|---|
+| 주체 | 요청을 보낸 사용자. 토큰에서 id를 읽고 DB에서 역할을 읽습니다 | 토큰을 읽지 않습니다. 누구인지 모르는 채로 응답합니다 | [`auth/auth.guard.ts 28~31행`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/auth/auth.guard.ts#L28-L31): 사용자를 확인해 요청에 붙이는 곳. 이 경로에서는 돌지 않습니다 |
+| 객체 | 전체 신청 목록(사용자 id, 강의 id, 전화번호) | 그대로 나갑니다 | [`enrollments/enrollments.service.ts 26행`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/enrollments/enrollments.service.ts#L26): `listAll()` |
+| 행위 | `admin:read`. 핸들러에 `@Authorize`로 적혀 있습니다 | 적혀 있지만 읽는 곳이 없습니다 | [`enrollments/admin.controller.ts 11행`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/enrollments/admin.controller.ts#L11) |
+| 판단 (PE) | `can()`. 관리자만 허용합니다 | 불리지 않습니다. 규칙 자체는 맞습니다 | [`authz/policy.ts 28~29행`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/authz/policy.ts#L28-L29) |
+| 시행 (PEP) | 인증 Guard와 인가 Guard | **이 경로에 없습니다. 결함은 여기입니다** | [`enrollments/admin.controller.ts 5행`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/enrollments/admin.controller.ts#L5): `@Controller` 위에 `@UseGuards`가 없음 |
+| 접근통제 모델 | RBAC. 역할만 보고 정합니다 | 적용되지 않습니다 | 판단과 같은 줄 |
 
 정리하면 규칙(판단)은 맞는데 그 규칙을 적용하는 자리(시행)가 비어 있었습니다. 그래서 분류가 "권한을 잘못 줬다"(접근 통제 실패)가 아니라 "확인 자체를 하지 않았다"(인증 누락, CWE-306)입니다.
 

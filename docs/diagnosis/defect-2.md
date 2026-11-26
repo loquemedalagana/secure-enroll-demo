@@ -230,14 +230,14 @@ flowchart LR
 
 접근통제는 "누가(주체) 무엇에(객체) 무엇을 하려는가(행위)"를 규칙에 따라 판단하고, 그 판단대로 막거나 통과시키는 일입니다. 이 경로를 그 요소에 맞춰 보면 다음과 같습니다.
 
-| 구성 요소 | 이 경로에서 | 결함 상태(`v2-defect-2`) |
-|---|---|---|
-| 주체 | 요청을 보낸 사용자. 토큰에서 id를 읽고 DB에서 역할을 읽습니다 | 토큰을 읽지 않습니다 |
-| 객체 | 강의 하나의 수강생 명단. 그 강의의 담당 강사가 누구인지가 판단에 쓰입니다 | 담당 강사를 읽지 않고 명단이 그대로 나갑니다 |
-| 행위 | `roster:read`. 핸들러에 `@Authorize`로 적혀 있습니다 | 적혀 있지만 읽히지 않습니다 |
-| 판단 (PE) | `can()`. 관리자, 또는 그 강의의 담당 강사만 허용합니다 | 불리지 않습니다. 규칙 자체는 맞습니다 |
-| 시행 (PEP) | 전역 Guard. 모든 요청이 지나갑니다 | **지나가기는 하지만, 경로의 앞부분만 보고 통과시킵니다. 결함은 여기입니다** |
-| 접근통제 모델 | RBAC(관리자인가)와 ABAC(이 강의의 담당 강사인가) | 둘 다 적용되지 않습니다 |
+| 구성 요소 | 이 경로에서 | 결함 상태(`v2-defect-2`) | 코드에서 확인하는 곳 |
+|---|---|---|---|
+| 주체 | 요청을 보낸 사용자. 토큰에서 id를 읽고 DB에서 역할을 읽습니다 | 토큰을 읽지 않습니다 | [`auth/auth.guard.ts 24~27행`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/auth/auth.guard.ts#L24-L27): 사용자를 확인해 요청에 붙이는 곳. 18행에서 먼저 통과해 여기까지 오지 않습니다 |
+| 객체 | 강의 하나의 수강생 명단. 그 강의의 담당 강사가 누구인지가 판단에 쓰입니다 | 담당 강사를 읽지 않고 명단이 그대로 나갑니다 | [`courses/courses.service.ts 17행`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/courses/courses.service.ts#L17): `roster()`. 담당 강사를 읽는 곳은 [`authz/authz.guard.ts 51~56행`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/authz/authz.guard.ts#L51-L56) |
+| 행위 | `roster:read`. 핸들러에 `@Authorize`로 적혀 있습니다 | 적혀 있지만 읽히지 않습니다 | [`courses/courses.controller.ts 18행`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/courses/courses.controller.ts#L18) |
+| 판단 (PE) | `can()`. 관리자, 또는 그 강의의 담당 강사만 허용합니다 | 불리지 않습니다. 규칙 자체는 맞습니다 | [`authz/policy.ts 38~42행`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/authz/policy.ts#L38-L42) |
+| 시행 (PEP) | 전역 Guard. 모든 요청이 지나갑니다 | **지나가기는 하지만, 경로의 앞부분만 보고 통과시킵니다. 결함은 여기입니다** | [`auth/is-public.ts 7행, 15행`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/auth/is-public.ts#L7-L15). 부르는 곳은 [`auth/auth.guard.ts 18행`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/auth/auth.guard.ts#L18), [`authz/authz.guard.ts 27행`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/authz/authz.guard.ts#L27) |
+| 접근통제 모델 | RBAC(관리자인가)와 ABAC(이 강의의 담당 강사인가) | 둘 다 적용되지 않습니다 | 판단과 같은 줄. 40행이 RBAC, 42행이 ABAC |
 
 결함 1과 비교하면 이렇습니다.
 
