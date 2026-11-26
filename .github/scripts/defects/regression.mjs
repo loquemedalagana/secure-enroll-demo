@@ -23,26 +23,24 @@ function finish(lines, code) {
 const what = state === 'defect' ? `결함 태그 \`v2-defect-${number}\`의 코드` : `수정 태그 \`v2-fix-${number}\`의 코드`;
 const title = `**${what}에 수정 태그의 테스트 실행**`;
 const result = parseTestOutput(readFileSync(file, 'utf8'));
-if (result === null) finish([`${title} · 테스트 결과의 건수를 읽지 못했습니다 ❌`], 2);
+if (result === null) finish([title, '', '⚠️ 테스트 결과의 건수를 읽지 못했습니다.'], 2);
 
 const { tests, pass, fail, failed } = result;
 if (state === 'defect') {
   // 결함이 있는 코드에서는 그 결함을 잡는 테스트가 실패해야 한다. 하나도 실패하지 않으면 회귀 테스트가 결함을 잡지 못하는 것이다.
+  // 표시는 테스트의 결과를 그대로 따른다(실패는 ❌, 통과는 ✅). 기대와 같은지는 글로 적는다.
   const ok = fail > 0;
   finish(
-    [
-      `${title} · 기대: 실패 있음 · 결과: ${tests}건 중 ${fail}건 실패 ${ok ? '✅' : '❌'}`,
-      '',
-      ...(ok ? failedTable(failed) : ['실패한 테스트가 없습니다. 회귀 테스트가 이 결함을 잡지 못합니다.']),
-    ],
+    ok
+      ? [title, '', `❌ ${tests}건 중 ${fail}건 실패. 결함이 있는 코드이므로 기대한 결과입니다.`, '', ...failedTable(failed)]
+      : [title, '', `✅ ${tests}건 모두 통과. ⚠️ **기대와 다릅니다.** 회귀 테스트가 이 결함을 잡지 못합니다.`],
     ok ? 0 : 1,
   );
 }
 const ok = fail === 0;
 finish(
-  [
-    `${title} · 기대: 모두 통과 · 결과: ${tests}건 중 ${pass}건 통과 ${ok ? '✅' : '❌'}`,
-    ...(ok ? [] : ['', ...failedTable(failed)]),
-  ],
+  ok
+    ? [title, '', `✅ ${tests}건 모두 통과. 기대한 결과입니다.`]
+    : [title, '', `❌ ${tests}건 중 ${pass}건 통과, ${fail}건 실패. ⚠️ **기대와 다릅니다.**`, '', ...failedTable(failed)],
   ok ? 0 : 1,
 );

@@ -18,5 +18,5 @@ export function parseTestOutput(text) {
 
 // 실패한 테스트 이름을 표로 만든다.
 export function failedTable(failed) {
-  return ['| 실패한 테스트 |', '|---|', ...failed.map((name) => `| ${name.replaceAll('|', '\\|')} |`)];
+  return ['| 실패한 테스트 |', '|---|', ...failed.map((name) => `| ❌ ${name.replaceAll('|', '\\|')} |`)];
 }

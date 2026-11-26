@@ -98,7 +98,10 @@ const detail = lines.filter((line) => line.startsWith('- ') || line.startsWith('
 summarize([
   // 결함마다 결함 태그를 먼저 실행한다. 그때 제목을 한 번 쓴다.
   ...(expect === 'vulnerable' ? [`### ${title}`, ''] : []),
-  `**${expect === 'vulnerable' ? '결함 태그' : '수정 태그'} \`${tag}\`** · 기대: ${LABEL[expect]} · 판정: ${verdict} ${ok ? '✅' : '❌'}`,
+  `**${expect === 'vulnerable' ? '결함 태그' : '수정 태그'} \`${tag}\`에서 재현**`,
+  '',
+  // 표시는 판정을 그대로 따른다(취약은 ❌, 차단은 ✅). 기대와 같은지는 글로 적는다.
+  `${verdict === '차단' ? '✅' : '❌'} 판정: ${verdict}. ${ok ? '기대한 결과입니다.' : `⚠️ **기대(${LABEL[expect]})와 다릅니다.**`}`,
   '',
   '```',
   ...detail,
