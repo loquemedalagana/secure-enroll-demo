@@ -17,7 +17,7 @@
 | 웹 (Next.js 14) | `apps/web` | v1의 앱 그대로입니다. 인메모리 데이터로 동작하고 아직 API를 호출하지 않습니다 |
 | API (Nest.js 12) | `apps/api` | 헬스 체크, 로그인, 토큰 발급·검증, 전역 인증·인가 Guard, 신청 조회, 강의 목록과 수강생 명단, 요청 로그. 테스트 92건 |
 | DB (PostgreSQL 18) | `compose.yaml`, `apps/api/prisma` | Prisma 마이그레이션과 더미 시드 |
-| CI | `.github/workflows/ci.yml` | `web`, `api`, `audit`(앱별), `netpol` |
+| CI | `.github/workflows/ci.yml`, `.github/workflows/defects.yml` | `ci`: `web`, `api`, `audit`(앱별), `netpol`. `defects`: 결함마다 결함 태그와 수정 태그를 띄워 재현 |
 | 네트워크 정책 | `k8s/` | kind와 Cilium으로 웹 앱에 적용해 검증 |
 | v2의 의도된 결함 | [docs/v2-defects.md](docs/v2-defects.md) | 8개 중 3개를 다뤘습니다. 진단 보고서: [결함 1](docs/diagnosis/defect-1.md), [결함 2](docs/diagnosis/defect-2.md), [결함 3](docs/diagnosis/defect-3.md) |
 
