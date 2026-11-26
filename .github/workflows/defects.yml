@@ -1,0 +1,121 @@
+name: defects
+
+# 결함마다 결함 태그(v2-defect-N)와 수정 태그(v2-fix-N)의 API를 각각 띄우고,
+# 같은 재현 스크립트를 실행해 결함 태그에서는 "취약", 수정 태그에서는 "차단"이 나오는지 확인한다.
+# 이어서 수정 태그의 테스트를 두 코드에 돌려, 결함 태그에서는 실패가 있고 수정 태그에서는 모두 통과하는지 확인한다.
+# 재현 스크립트는 이 워크플로가 실행되는 커밋의 것이고, 띄우는 앱만 태그의 것이다.
+# 태그가 푸시될 때 실행하지 않는 이유: 그 경우 태그 시점의 워크플로 파일이 쓰이는데, 옛 태그에는 이 파일이 없다.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# 기본 토큰 권한은 모두 끄고, 잡마다 필요한 만큼만 연다.
+permissions: {}
+
+concurrency:
+  group: defects-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  reproduce:
+    name: defect ${{ matrix.n }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    strategy:
+      # 결함 하나가 기대와 달라도 나머지 결함은 끝까지 확인한다.
+      fail-fast: false
+      matrix:
+        # 결함 태그와 수정 태그가 둘 다 있는 결함의 번호. 결함을 다룰 때마다 하나씩 더한다.
+        n: [1, 2, 3]
+    services:
+      postgres:
+        # ci.yml, 로컬 compose.yaml과 같은 이미지·다이제스트다.
+        image: postgres:18.7-alpine3.24@sha256:0115267ab5a509022df9319c77be365cef335adb71556c75f60f5360ee247e71
+        env:
+          POSTGRES_USER: enroll
+          # 러너와 함께 사라지는 DB의 더미 값이다. 저장소 시크릿이 아니다.
+          POSTGRES_PASSWORD: dummy-ci-only
+          POSTGRES_DB: enroll
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U enroll -d enroll"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 30
+    env:
+      DATABASE_URL: postgresql://enroll:dummy-ci-only@127.0.0.1:5432/enroll
+      # 토큰 서명 키. 러너 안에서만 쓰는 더미 값이다. 저장소 시크릿이 아니다.
+      TOKEN_SECRET: dummy-ci-only-token-secret-000000000
+      # 매트릭스 값은 명령 문자열에 직접 끼워 넣지 않고 환경 변수로 넘긴다.
+      DEFECT: ${{ matrix.n }}
+    steps:
+      # 재현 스크립트(.github/scripts/defects)는 이 커밋의 것을 쓴다.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: v2-defect-${{ matrix.n }}
+          path: at-defect
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: v2-fix-${{ matrix.n }}
+          path: at-fix
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      # 의존성의 설치 스크립트는 실행하지 않는다(ci.yml의 api 잡과 같다).
+      - name: 결함 태그의 API 준비
+        working-directory: at-defect/apps/api
+        run: |
+          npm ci --ignore-scripts
+          npm run db:generate
+          npm run build
+          npm run db:migrate
+          npm run db:seed
+      - name: 결함 태그에서 재현 (기대 - 취약)
+        run: node .github/scripts/defects/reproduce.mjs "$DEFECT" at-defect vulnerable
+      # 회귀 테스트가 이 결함을 잡는지 본다. 결함이 있는 코드에 수정 태그의 테스트를 돌리면 실패가 있어야 한다.
+      # 테스트 출력은 파일로만 받는다. 실패한 이유에 응답의 값이 찍힐 수 있어서, 건수와 이름만 옮긴다.
+      - name: 결함 태그의 코드에 수정 태그의 테스트 실행 (기대 - 실패 있음)
+        if: ${{ !cancelled() }}
+        working-directory: at-defect/apps/api
+        shell: bash
+        run: |
+          # 테스트는 자기 위치를 기준으로 ../dist를 불러오므로, 결함 태그의 코드 옆으로 복사해서 돌린다.
+          cp -R ../../../at-fix/apps/api/test test-at-fix
+          npm run db:seed
+          # 실패가 있는 것이 기대다. 성공과 실패는 다음 줄의 스크립트가 정한다.
+          node --test test-at-fix/*.test.mjs > "$RUNNER_TEMP/regression-defect.txt" 2>&1 || true
+          node "$GITHUB_WORKSPACE/.github/scripts/defects/regression.mjs" "$DEFECT" defect "$RUNNER_TEMP/regression-defect.txt"
+
+      # 결함 태그에서 기대와 달랐더라도 수정 태그는 확인한다. 시드는 데이터를 지우고 다시 넣으므로 같은 DB를 쓴다.
+      - name: 수정 태그의 API 준비
+        if: ${{ !cancelled() }}
+        working-directory: at-fix/apps/api
+        run: |
+          npm ci --ignore-scripts
+          npm run db:generate
+          npm run build
+          npm run db:migrate
+          npm run db:seed
+      - name: 수정 태그에서 재현 (기대 - 차단)
+        if: ${{ !cancelled() }}
+        run: node .github/scripts/defects/reproduce.mjs "$DEFECT" at-fix blocked
+      - name: 수정 태그의 코드에 수정 태그의 테스트 실행 (기대 - 모두 통과)
+        if: ${{ !cancelled() }}
+        working-directory: at-fix/apps/api
+        shell: bash
+        run: |
+          npm run db:seed
+          node --test test/*.test.mjs > "$RUNNER_TEMP/regression-fix.txt" 2>&1 || true
+          node "$GITHUB_WORKSPACE/.github/scripts/defects/regression.mjs" "$DEFECT" fix "$RUNNER_TEMP/regression-fix.txt"

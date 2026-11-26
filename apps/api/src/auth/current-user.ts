@@ -4,7 +4,9 @@ import type { Role } from '../generated/prisma/client.js';
 
 // 인증 Guard가 요청에 붙이는 사용자 정보. id는 토큰에서, role은 그 요청 시점의 DB에서 온다.
 export type AuthUser = { id: string; role: Role };
-export type AuthedRequest = Request & { user?: AuthUser };
+// 인가 Guard가 판단을 마친 요청에 붙이는 결과. 요청 로그가 읽는다.
+export type AuthzDecision = { action: string; allowed: boolean };
+export type AuthedRequest = Request & { user?: AuthUser; authz?: AuthzDecision };
 
 export const CurrentUser = createParamDecorator((_data: unknown, context: ExecutionContext): AuthUser => {
   const user = context.switchToHttp().getRequest<AuthedRequest>().user;
