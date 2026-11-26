@@ -404,6 +404,18 @@ node .github/scripts/defects/defect-3.mjs /tmp/api.log --expect blocked
 
 실패하던 2건은 3.4절의 테스트 1과 2입니다. 테스트 2는 유효한 토큰과 검증에 실패한 토큰을 둘 다 확인하는데, 결함 상태에서는 유효한 토큰에서 먼저 멈췄습니다. 조치 뒤에는 두 검사를 모두 통과합니다.
 
+### CI 실행 기록
+
+이 결함을 다룬 PR에서 실제로 돈 실행입니다.
+
+| 시점 | 커밋 | `api` 잡 | 실행 |
+|---|---|---|---|
+| 결함이 든 구현을 올린 뒤 | `78e3752` | 실패 (86건 중 1건, 인증 때 넣은 테스트) | [45789306932](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45789306932) |
+| 테스트를 추가한 뒤 | `223a7e4` | 실패 (87건 중 2건) | [45791174560](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45791174560) |
+| 수정한 뒤 | `2502f20` | 통과 (87건) | [45796468140](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45796468140) |
+
+실행의 로그는 GitHub의 보존 기간(기본 90일)이 지나면 지워집니다. 같은 실패와 통과는 `defects.yml`이 실행될 때마다 다시 만들어집니다. 결함 태그의 코드에 수정 태그의 테스트를 돌려 위와 같은 테스트가 실패하는지, 수정 태그에서는 모두 통과하는지 확인하고 Summary에 실패한 테스트의 이름을 남깁니다.
+
 ## 6. Burp Suite 진단 기록
 
 작성 전.

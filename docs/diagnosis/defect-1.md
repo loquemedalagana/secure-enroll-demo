@@ -293,6 +293,17 @@ node .github/scripts/defects/defect-1.mjs --expect blocked
 
 실패하던 3건은 `apps/api/test/guard-coverage.test.mjs`의 테스트입니다. 세 번째 테스트는 서버가 등록한 경로를 전부 읽어 토큰 없이 요청하므로, 컨트롤러를 새로 추가해도 같은 검사가 적용됩니다.
 
+### CI 실행 기록
+
+이 결함을 다룬 PR에서 실제로 돈 실행입니다.
+
+| 시점 | 커밋 | `api` 잡 | 실행 |
+|---|---|---|---|
+| 테스트를 추가한 뒤 | `fea395d` | 실패 (62건 중 3건) | [45597908796](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45597908796) |
+| 수정한 뒤 | `a691eca` | 통과 (62건) | [45758558647](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45758558647) |
+
+실행의 로그는 GitHub의 보존 기간(기본 90일)이 지나면 지워집니다. 같은 실패와 통과는 `defects.yml`이 실행될 때마다 다시 만들어집니다. 결함 태그의 코드에 수정 태그의 테스트를 돌려 위와 같은 테스트가 실패하는지, 수정 태그에서는 모두 통과하는지 확인하고 Summary에 실패한 테스트의 이름을 남깁니다.
+
 ## 6. Burp Suite 진단 기록
 
 작성 전.
