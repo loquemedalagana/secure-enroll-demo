@@ -27,6 +27,8 @@ jobs:
     defaults:
       run:
         working-directory: apps/web
+        # bash를 명시하면 pipefail이 켜진다. 테스트 출력을 tee로 받아도 테스트의 실패가 단계의 실패로 남는다.
+        shell: bash
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -37,7 +39,10 @@ jobs:
           node-version: 24
       - run: npm ci
       - run: npm run build
-      - run: npm test
+      - run: npm test 2>&1 | tee "$RUNNER_TEMP/test-output.txt"
+      # 테스트가 실패해도 요약은 쓴다. 건수와 실패한 테스트 이름만 옮긴다.
+      - if: always()
+        run: node ../../.github/scripts/test-summary.mjs "웹 테스트" "$RUNNER_TEMP/test-output.txt"
 
   # API(Nest.js): 러너 안의 PostgreSQL에 마이그레이션과 시드를 적용하고 HTTP 수준 테스트를 돌린다.
   api:
@@ -68,6 +73,8 @@ jobs:
     defaults:
       run:
         working-directory: apps/api
+        # bash를 명시하면 pipefail이 켜진다. 테스트 출력을 tee로 받아도 테스트의 실패가 단계의 실패로 남는다.
+        shell: bash
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -81,7 +88,10 @@ jobs:
       - run: npm run build
       - run: npm run db:migrate
       - run: npm run db:seed
-      - run: npm test
+      - run: npm test 2>&1 | tee "$RUNNER_TEMP/test-output.txt"
+      # 테스트가 실패해도 요약은 쓴다. 건수와 실패한 테스트 이름만 옮긴다.
+      - if: always()
+        run: node ../../.github/scripts/test-summary.mjs "API 테스트" "$RUNNER_TEMP/test-output.txt"
 
   # 앱마다 lock 파일과 예외 목록이 따로 있다.
   audit:
