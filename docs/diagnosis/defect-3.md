@@ -80,7 +80,7 @@ node .github/scripts/defects/defect-3.mjs /tmp/api.log
 
 ## 3. 원인
 
-요청 하나가 처리되는 동안 로그에 값을 쓰는 곳이 세 군데이고, 그중 두 군데가 받은 값을 그대로 씁니다.
+요청 하나가 처리되는 동안 로그를 남기는 곳이 세 군데이고, 그중 두 군데에서 받은 값이 그대로 노출됩니다.
 
 ```mermaid
 flowchart LR
@@ -112,7 +112,7 @@ flowchart LR
   linkStyle 3,4 stroke:#A32D2D,stroke-width:2px
 ```
 
-빨강은 받은 값을 그대로 로그에 쓰는 곳과 그 값이 나가는 길, 초록은 정상으로 동작하는 곳입니다. 응답은 두 요청 모두 정상입니다.
+빨강은 받은 값이 로그에 그대로 노출되는 곳과 그 값이 나가는 길, 초록은 정상으로 동작하는 곳입니다. 응답은 두 요청 모두 정상입니다.
 
 ### 3.1 원인 코드
 
@@ -120,9 +120,9 @@ flowchart LR
 - 로그인 핸들러가 받은 본문을 출력합니다: [`auth/auth.controller.ts` 18행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-3/apps/api/src/auth/auth.controller.ts#L18). 비밀번호를 확인하기 전의 줄이라, 틀린 비밀번호도 찍힙니다.
 - 요청 로그 자체는 메서드, 주소, 상태 코드, 걸린 시간만 남깁니다: [`common/request-log.ts` 6~8행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-3/apps/api/src/common/request-log.ts#L6-L8).
 
-### 3.2 로그에 값을 쓰는 곳
+### 3.2 로그에 값이 노출되는 곳
 
-| 쓰는 곳 | 언제 | 쓰는 값 | 민감한 값 |
+| 로그를 남기는 곳 | 언제 | 남기는 값 | 노출되는 민감한 값 |
 |---|---|---|---|
 | [`common/request-log.ts` 7행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-3/apps/api/src/common/request-log.ts#L7) | 모든 요청이 끝날 때 | 메서드, 주소, 상태 코드, 걸린 시간 | 없음 |
 | [`auth/auth.guard.ts` 22행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-3/apps/api/src/auth/auth.guard.ts#L22) | `@Public`이 아닌 모든 요청 | `Authorization` 헤더 전체 | **토큰** |
