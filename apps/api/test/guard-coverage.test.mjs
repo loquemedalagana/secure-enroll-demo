@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { bearerFor, startServer } from './helpers.mjs';
 
 // 토큰 없이 열어 두는 경로는 이 목록이 전부다. 공개 경로를 늘리려면 여기에 적어야 한다.
-const PUBLIC_ROUTES = new Set(['GET /health/live', 'GET /health/ready', 'POST /auth/login']);
+const PUBLIC_ROUTES = new Set(['GET /health/live', 'GET /health/ready', 'POST /auth/login', 'GET /courses']);
 
 let server;
 before(async () => {

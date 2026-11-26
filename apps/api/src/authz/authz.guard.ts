@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { AuthedRequest } from '../auth/current-user.js';
-import { IS_PUBLIC } from '../auth/public.decorator.js';
+import { isPublic } from '../auth/is-public.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AUTHORIZE, type AuthorizeRule } from './authorize.decorator.js';
 import { type Resource, can } from './policy.js';
@@ -24,14 +24,16 @@ export class AuthzGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const targets = [context.getHandler(), context.getClass()];
-    if (this.reflector.getAllAndOverride<boolean | undefined>(IS_PUBLIC, targets) === true) return true;
+    if (isPublic(this.reflector, context)) return true;
 
     const req = context.switchToHttp().getRequest<AuthedRequest>();
     const user = req.user ?? null;
     if (!user) throw new UnauthorizedException();
 
-    const rule = this.reflector.getAllAndOverride<AuthorizeRule | undefined>(AUTHORIZE, targets);
+    const rule = this.reflector.getAllAndOverride<AuthorizeRule | undefined>(AUTHORIZE, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
     if (!rule) throw new ForbiddenException();
 
     let resource: Resource | undefined;
@@ -46,6 +48,12 @@ export class AuthzGuard implements CanActivate {
           : null;
       if (!enrollment) throw new NotFoundException();
       resource = { ownerId: enrollment.userId, instructorId: enrollment.course.instructorId };
+    } else if (rule.resource === 'course') {
+      const id = req.params['id'];
+      const course =
+        typeof id === 'string' ? await this.prisma.course.findUnique({ where: { id }, select: { instructorId: true } }) : null;
+      if (!course) throw new NotFoundException();
+      resource = { instructorId: course.instructorId };
     }
 
     if (!can(user, rule.action, resource)) throw new ForbiddenException();

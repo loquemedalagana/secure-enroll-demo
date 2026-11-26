@@ -1,0 +1,23 @@
+import { Controller, Get, Header, Param } from '@nestjs/common';
+import { Authorize } from '../authz/authorize.decorator.js';
+import type { EnrollmentView } from '../enrollments/enrollments.service.js';
+import { type CourseView, CoursesService } from './courses.service.js';
+
+@Controller('courses')
+export class CoursesController {
+  constructor(private readonly courses: CoursesService) {}
+
+  // 강의 목록. 로그인하지 않아도 볼 수 있다(공개 여부는 auth/is-public.ts가 정한다).
+  @Get()
+  list(): Promise<CourseView[]> {
+    return this.courses.list();
+  }
+
+  // 강의 하나의 수강생 명단. 그 강의의 담당 강사와 관리자만 볼 수 있다(인가 Guard가 판단한다).
+  @Get(':id/enrollments')
+  @Authorize('roster:read', { resource: 'course' })
+  @Header('Cache-Control', 'no-store')
+  roster(@Param('id') id: string): Promise<EnrollmentView[]> {
+    return this.courses.roster(id);
+  }
+}
