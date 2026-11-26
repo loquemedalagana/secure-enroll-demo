@@ -1,4 +1,5 @@
 import { Controller, Get, Header, Param } from '@nestjs/common';
+import { Public } from '../auth/public.decorator.js';
 import { Authorize } from '../authz/authorize.decorator.js';
 import type { EnrollmentView } from '../enrollments/enrollments.service.js';
 import { type CourseView, CoursesService } from './courses.service.js';
@@ -7,7 +8,8 @@ import { type CourseView, CoursesService } from './courses.service.js';
 export class CoursesController {
   constructor(private readonly courses: CoursesService) {}
 
-  // 강의 목록. 로그인하지 않아도 볼 수 있다(공개 여부는 auth/is-public.ts가 정한다).
+  // 강의 목록. 로그인하지 않아도 볼 수 있다.
+  @Public()
   @Get()
   list(): Promise<CourseView[]> {
     return this.courses.list();
