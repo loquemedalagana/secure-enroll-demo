@@ -6,8 +6,8 @@
 | 경로 | `GET /admin/enrollments` |
 | 분류 | OWASP Top 10 2025 A07 Authentication Failures / CWE-306 (중요 기능의 인증 누락) |
 | 위험도 | 높음 |
-| 해당 구성 요소 | PEP(정책 시행 지점). 이 경로에는 시행 지점이 없습니다 |
-| 상태 | 결함 확인. 조치 전 |
+| 해당 구성 요소 | PEP(정책 시행 지점). 결함 상태에서는 이 경로에 시행 지점이 없습니다 |
+| 상태 | 조치 완료 (`v2-fix-1`) |
 
 ## 1. 요약
 
@@ -161,11 +161,65 @@ flowchart LR
 
 ### 4.2 적용한 조치
 
-작성 전. 수정 커밋(`v2-fix-1`) 뒤에 적습니다.
+커밋 두 개로 나눴습니다. 첫 커밋이 결함을 막고, 둘째 커밋은 동작을 바꾸지 않는 정리입니다.
+
+| 커밋 | 바꾼 것 | 동작 변화 |
+|---|---|---|
+| Guard를 전역으로 등록 | [`app.module.ts` 15~18행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-fix-1/apps/api/src/app.module.ts#L15-L18): 인증 Guard와 인가 Guard를 `APP_GUARD`로 등록 | `GET /admin/enrollments`가 토큰 없이 200 → 401, 학생 토큰으로 200 → 403 |
+| 컨트롤러별 Guard 적용 삭제 | `auth.controller.ts`, `enrollments.controller.ts`의 `@UseGuards`와 `auth.module.ts`, `enrollments.module.ts`의 Guard 등록 | 없음 |
+
+관리자 컨트롤러([`admin.controller.ts`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-fix-1/apps/api/src/enrollments/admin.controller.ts))는 바꾸지 않았습니다. 결함 상태와 같은 파일인데, 전역 Guard를 지나게 되어 막힙니다.
+
+```mermaid
+flowchart LR
+  req1(["GET /enrollments/e2<br/>토큰 없음"])
+  req2(["GET /admin/enrollments<br/>토큰 없음"])
+  req3(["GET /health/live<br/>토큰 없음"])
+
+  subgraph pep["전역 Guard · app.module.ts"]
+    g1["인증 Guard"] --> g2["인가 Guard<br/>can() 호출"]
+  end
+
+  req1 --> g1
+  req2 --> g1
+  req3 --> g1
+  g1 -. "401" .-> out1(["거부"])
+  g1 -- "@Public" --> h3["Health 핸들러"]
+  g2 --> h1["Enrollments · Admin 핸들러"]
+
+  classDef safe fill:#E1F5EE,stroke:#0F6E56,color:#04342C
+  class g1,g2,out1 safe
+  style pep fill:none,stroke:#0F6E56
+```
+
+모든 요청이 같은 Guard를 지납니다. `@Public`이 붙은 경로 3개만 검사 없이 통과합니다.
 
 ## 5. 조치 뒤 재확인
 
-작성 전. `v2-fix-1`에서 2절과 같은 요청을 다시 보낸 결과를 적습니다.
+`v2-fix-1`을 로컬에서 띄우고 2절과 같은 스크립트를 실행한 결과입니다.
+
+```bash
+node .github/scripts/defects/defect-1.mjs --expect blocked
+```
+
+```
+결함 1: 전체 신청 목록(GET /admin/enrollments)의 인증·인가
+- GET /admin/enrollments (토큰 없음)
+    → 상태 401 · 필드: error
+- GET /admin/enrollments (학생 토큰)
+    → 상태 403 · 필드: error
+판정: 차단
+```
+
+| 확인 | 결함 상태 (`v2-defect-1`) | 조치 뒤 (`v2-fix-1`) |
+|---|---|---|
+| 토큰 없음 | 200, 3건 | 401 |
+| 학생 토큰 | 200, 3건 | 403 |
+| 관리자 토큰 | 200, 3건 | 200, 3건 |
+| 공개 경로(`GET /health/live`) | 200 | 200 |
+| API 테스트 | 62건 중 3건 실패 | 62건 통과 |
+
+실패하던 3건은 `apps/api/test/guard-coverage.test.mjs`의 테스트입니다. 세 번째 테스트는 서버가 등록한 경로를 전부 읽어 토큰 없이 요청하므로, 컨트롤러를 새로 추가해도 같은 검사가 적용됩니다.
 
 ## 6. Burp Suite 진단 기록
 
