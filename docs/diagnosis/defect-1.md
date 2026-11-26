@@ -107,14 +107,26 @@ flowchart LR
 
 ### 4.1 조치 방안 비교
 
+여기서 경로는 API가 받는 요청 주소(메서드와 URL)입니다. 이 API에 등록된 경로는 7개입니다.
+
+| 경로 | 컨트롤러 | 토큰 없이 요청하면 |
+|---|---|---|
+| `GET /health/live` | Health | 열려 있어야 함 (공개) |
+| `GET /health/ready` | Health | 열려 있어야 함 (공개) |
+| `POST /auth/login` | Auth | 열려 있어야 함 (공개) |
+| `GET /auth/me` | Auth | 401 |
+| `GET /enrollments` | Enrollments | 401 |
+| `GET /enrollments/:id` | Enrollments | 401 |
+| `GET /admin/enrollments` | Admin | 401이어야 하는데 지금은 200 (결함 1) |
+
 고칠 방법은 두 가지입니다.
 
 - **가**: Guard가 빠진 관리자 컨트롤러에 `@UseGuards(AuthGuard, AuthzGuard)`를 추가합니다.
-- **나**: Guard 두 개를 전역(`APP_GUARD`)으로 등록하고 컨트롤러의 `@UseGuards`를 지웁니다. 토큰 없이 열 경로에만 `@Public`을 붙입니다.
+- **나**: Guard 두 개를 전역(`APP_GUARD`)으로 등록하고 컨트롤러의 `@UseGuards`를 지웁니다. 토큰 없이 열 경로 3개에만 `@Public`을 붙입니다.
 
 | 기준 | 가 (컨트롤러에 추가) | 나 (전역 등록) |
 |---|---|---|
-| 표시를 빠뜨렸을 때 | 경로가 열립니다 | 경로가 막힙니다(401 또는 403) |
+| 표시를 빠뜨렸을 때 | 그 컨트롤러의 경로가 열립니다(`GET /admin/enrollments`처럼) | 그 경로가 막힙니다(401 또는 403) |
 | 컨트롤러를 새로 추가할 때 | `@UseGuards`를 다시 붙여야 합니다 | 할 일이 없습니다 |
 | 바꾸는 파일 | 1개 | 4개(모듈 1, 컨트롤러 3) |
 | Guard가 도는지 확인하는 곳 | 그 컨트롤러 파일 | 모듈 파일 한 곳 |
