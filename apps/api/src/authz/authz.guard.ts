@@ -56,7 +56,10 @@ export class AuthzGuard implements CanActivate {
       resource = { instructorId: course.instructorId };
     }
 
-    if (!can(user, rule.action, resource)) throw new ForbiddenException();
+    const allowed = can(user, rule.action, resource);
+    // 판단 결과를 요청 로그가 읽을 수 있게 남긴다. 거부한 경우에도 남긴다.
+    req.authz = { action: rule.action, allowed };
+    if (!allowed) throw new ForbiddenException();
     return true;
   }
 }
