@@ -1,13 +1,10 @@
-import { Body, Controller, Get, Header, HttpCode, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Header, HttpCode, Post } from '@nestjs/common';
 import { Authorize } from '../authz/authorize.decorator.js';
-import { AuthzGuard } from '../authz/authz.guard.js';
-import { AuthGuard } from './auth.guard.js';
 import { AuthService, type LoginResult } from './auth.service.js';
 import { type AuthUser, CurrentUser } from './current-user.js';
 import { LoginDto } from './login.dto.js';
 import { Public } from './public.decorator.js';
 
-@UseGuards(AuthGuard, AuthzGuard)
 @Controller('auth')
 export class AuthController {
   constructor(private readonly auth: AuthService) {}

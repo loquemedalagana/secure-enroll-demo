@@ -1,11 +1,8 @@
-import { Controller, Get, Header, NotFoundException, Param, UseGuards } from '@nestjs/common';
-import { AuthGuard } from '../auth/auth.guard.js';
+import { Controller, Get, Header, NotFoundException, Param } from '@nestjs/common';
 import { type AuthUser, CurrentUser } from '../auth/current-user.js';
 import { Authorize } from '../authz/authorize.decorator.js';
-import { AuthzGuard } from '../authz/authz.guard.js';
 import { type EnrollmentView, EnrollmentsService } from './enrollments.service.js';
 
-@UseGuards(AuthGuard, AuthzGuard)
 @Controller('enrollments')
 export class EnrollmentsController {
   constructor(private readonly enrollments: EnrollmentsService) {}

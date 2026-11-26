@@ -6,7 +6,7 @@ import { IS_PUBLIC } from './public.decorator.js';
 
 const BEARER = /^Bearer ([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)$/;
 
-// 인증 Guard. 이 Guard가 붙은 컨트롤러에서 @Public이 아닌 핸들러는 토큰을 요구한다.
+// 인증 Guard. 모든 경로에 적용된다(app.module.ts). @Public이 아닌 핸들러는 토큰을 요구한다.
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
