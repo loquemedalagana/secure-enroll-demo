@@ -255,7 +255,91 @@ flowchart LR
 
 ### 4.1 조치 방안 비교
 
-작성 전. 수정에 들어가기 전에 적습니다.
+고칠 곳은 `apps/api/src/auth/is-public.ts`의 경로 비교입니다. 방법은 세 가지입니다.
+
+- **가**: "시작하면"을 "같으면"으로 바꿉니다.
+- **나**: 경로 비교를 없애고, 핸들러에 붙인 `@Public`만 봅니다. 강의 목록 핸들러에 `@Public`을 붙입니다.
+- **다**: 열어 둘 경로를 메서드와 등록 경로로 적은 목록을 한 곳에 두고, 요청이 닿은 등록 경로와 비교합니다.
+
+#### 실제로 바꿔 본 결과
+
+세 방안을 태그 `v2-defect-2`의 코드에 각각 적용해 테스트와 요청을 돌려 봤습니다. 이 변경들은 커밋하지 않았고, 아래 코드를 그대로 적용하면 같은 결과를 다시 볼 수 있습니다.
+
+가:
+
+```diff
+-  return PUBLIC_PREFIXES.some((prefix) => path.startsWith(prefix));
++  return PUBLIC_PREFIXES.some((prefix) => path === prefix);
+```
+
+나:
+
+```diff
+ // auth/is-public.ts
+-  if (marked === true) return true;
+-
+-  const { path } = context.switchToHttp().getRequest<Request>();
+-  return PUBLIC_PREFIXES.some((prefix) => path.startsWith(prefix));
++  return marked === true;
+
+ // courses/courses.controller.ts
++  @Public()
+   @Get()
+   list(): Promise<CourseView[]> {
+```
+
+다:
+
+```diff
+-const PUBLIC_PREFIXES: readonly string[] = ['/courses'];
++const PUBLIC_ROUTES: readonly string[] = ['GET /courses'];
+ ...
+-  const { path } = context.switchToHttp().getRequest<Request>();
+-  return PUBLIC_PREFIXES.some((prefix) => path.startsWith(prefix));
++  const req = context.switchToHttp().getRequest<Request>();
++  return PUBLIC_ROUTES.includes(`${req.method} ${String(req.route?.path)}`);
+```
+
+토큰 없이 보낸 요청의 상태 코드입니다.
+
+| 요청 | 닿는 핸들러 | 결함 상태 | 가 | 나 | 다 |
+|---|---|---|---|---|---|
+| `GET /courses` | 강의 목록 | 200 | 200 | 200 | 200 |
+| `GET /courses/` | 강의 목록 | 200 | **401** | 200 | 200 |
+| `GET /Courses` | 강의 목록 | **401** | **401** | 200 | 200 |
+| `GET /courses/c1/enrollments` | 수강생 명단 | **200** | 401 | 401 | 401 |
+| `GET /courses/c1/enrollments/` | 수강생 명단 | **200** | 401 | 401 | 401 |
+| `GET /COURSES/c1/enrollments` | 수강생 명단 | 401 | 401 | 401 | 401 |
+| API 테스트 76건 | | 6건 실패 | 모두 통과 | 모두 통과 | 모두 통과 |
+
+읽을 점은 두 가지입니다.
+
+- 세 방안 모두 수강생 명단을 막고, 테스트 76건을 통과합니다. 가도 결함을 고칩니다.
+- 가에서는 같은 핸들러로 가는 요청인데 주소의 글자에 따라 답이 갈립니다. 서버는 `/courses/`와 `/Courses`를 강의 목록 핸들러로 보내는데(끝의 `/`와 대소문자를 구분하지 않습니다), 글자 비교는 이것을 다른 주소로 봅니다. 이번에는 막히는 쪽으로 어긋났습니다. 결함 상태의 `/Courses` 401도 같은 이유입니다.
+
+#### 비교
+
+| 기준 | 가 (같으면) | 나 (`@Public`만) | 다 (목록) |
+|---|---|---|---|
+| 바꾸는 줄 | 1줄 | 5줄 안팎, 파일 2개 | 4줄, 파일 1개 |
+| 무엇을 보고 정하나 | 주소의 글자 | 요청이 닿은 핸들러 | 요청이 닿은 등록 경로 |
+| 서버가 주소를 해석하는 방식과 어긋날 수 있나 | 있습니다(위 표) | 없습니다 | 없습니다 |
+| 경로 이름을 바꿀 때 | 목록의 글자도 고쳐야 합니다 | 할 일이 없습니다 | 목록도 고쳐야 합니다 |
+| 열어 둔 경로를 한눈에 보는 곳 | `is-public.ts` | 없습니다. `@Public`을 검색해야 합니다 | `is-public.ts` |
+| 열어 두는 방법의 수 | 둘(`@Public`, 글자 목록) | 하나 | 둘(`@Public`, 경로 목록) |
+
+**고른 것**: 나.
+
+**이유**: 이 결함의 원인은 `startsWith`라는 함수 하나가 아니라, 열어 둘지를 주소의 글자로 정한다는 점입니다. 주소를 핸들러로 보내는 일은 서버가 하고, 그 규칙(끝의 `/`, 대소문자, 앞으로 생길 경로)을 글자 비교가 똑같이 따라가야 맞습니다. 나는 서버가 이미 정한 결과(어느 핸들러인가)를 그대로 쓰므로 어긋날 일이 없습니다. 헬스 체크와 로그인이 이미 `@Public`을 쓰고 있어서 열어 두는 방법도 하나로 줄어듭니다.
+
+**채택하지 않은 대안 (가)**: 한 줄로 끝나고 결함을 실제로 고칩니다. 급히 막아야 할 때는 가를 먼저 적용하는 것이 맞습니다. 다만 글자 비교가 남아서, 어긋남이 다음에는 열리는 쪽으로 생길 수 있습니다.
+
+**채택하지 않은 대안 (다)**: 서버의 해석과 어긋나지 않고, 열어 둔 경로가 한 파일에 모입니다. 그런데 그 목록은 이미 테스트(`apps/api/test/guard-coverage.test.mjs`의 `PUBLIC_ROUTES`)에 있습니다. 코드에도 두면 같은 목록이 두 곳이 되고, 열어 두는 방법도 둘로 남습니다.
+
+**감수하는 것**:
+
+- 열어 둔 경로를 코드 한 곳에서 볼 수 없습니다. 테스트의 `PUBLIC_ROUTES`가 그 역할을 하고, 목록에 없는 경로가 토큰 없이 열리면 테스트가 실패합니다.
+- 보호해야 할 핸들러에 `@Public`을 잘못 붙이면 열립니다. 이것도 같은 테스트가 잡습니다.
 
 ### 4.2 적용한 조치
 
