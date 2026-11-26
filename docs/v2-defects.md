@@ -141,7 +141,7 @@ git checkout v2-defect-N                  # 결함 상태 재현
 | # | 결함 | 브랜치 | 결함 태그 | 수정 태그 | 상태 |
 |---|---|---|---|---|---|
 | 1 | Guard를 컨트롤러마다 붙임 | `v2/05-authorization` | `v2-defect-1` | `v2-fix-1` | 수정함. [보고서](diagnosis/defect-1.md) |
-| 2 | 경로 문자열로 인증을 건너뜀 | `v2/05-authorization` | `v2-defect-2` | 미정 | 결함 확인. [보고서](diagnosis/defect-2.md) |
+| 2 | 경로 문자열로 인증을 건너뜀 | `v2/05-authorization` | `v2-defect-2` | `v2-fix-2` | 수정함. [보고서](diagnosis/defect-2.md) |
 | 3 | 요청 로그에 토큰과 비밀번호 | `v2/06-logging` | 미정 | 미정 | 계획 |
 | 4 | 스크립트가 읽을 수 있는 토큰 | `v2/08-web-to-api` | 미정 | 미정 | 계획 |
 | 5 | 상태 변경을 GET으로 받음 | `v2/09-web-enroll` | 미정 | 미정 | 계획 |

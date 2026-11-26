@@ -7,7 +7,7 @@
 | 분류 | OWASP Top 10 2025 A07 Authentication Failures / CWE-306 (중요 기능의 인증 누락) |
 | 위험도 | 높음 |
 | 해당 구성 요소 | PEP(정책 시행 지점). 시행 지점은 있지만 경로의 앞부분만 보고 통과시켜서, 판단(PE, `can()`)에 묻지 않습니다 |
-| 상태 | 결함 확인. 조치 전 |
+| 상태 | 조치 완료 (`v2-fix-2`) |
 
 ## 1. 요약
 
@@ -384,11 +384,76 @@ flowchart TB
 
 ### 4.2 적용한 조치
 
-작성 전. 수정 커밋(`v2-fix-2`) 뒤에 적습니다.
+방안 2를 커밋 하나로 적용했습니다. 동작을 바꾸지 않는 정리는 따로 없습니다.
+
+| 바꾼 곳 | 내용 |
+|---|---|
+| [`auth/is-public.ts` 7~9행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-fix-2/apps/api/src/auth/is-public.ts#L7-L9) | 주소가 `/courses`로 시작하는지 보는 비교를 지웠습니다. 핸들러나 컨트롤러에 `@Public`이 붙어 있는지만 봅니다 |
+| [`courses/courses.controller.ts` 12행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-fix-2/apps/api/src/courses/courses.controller.ts#L12) | 강의 목록 핸들러에 `@Public()`을 붙였습니다 |
+| `app.module.ts` | 주석 한 줄 |
+
+수강생 명단 핸들러([`courses/courses.controller.ts`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-fix-2/apps/api/src/courses/courses.controller.ts))는 바꾸지 않았습니다. `@Public`이 없으므로 Guard의 검사를 거치고, 붙어 있던 `@Authorize('roster:read', ...)`가 읽힙니다.
+
+```mermaid
+flowchart LR
+  req1(["GET /courses<br/>토큰 없음"])
+  req2(["GET /courses/c1/enrollments<br/>토큰 없음"])
+
+  subgraph pep["전역 Guard · app.module.ts"]
+    q{"isPublic()<br/>처리할 핸들러에<br/>@Public이 있는가"}
+    g["토큰 검증<br/>can() 호출"]
+    q -- "아니오" --> g
+  end
+
+  req1 --> q
+  req2 --> q
+  q -- "예" --> h1["강의 목록 핸들러<br/>@Public"]
+  g -. "401" .-> out1(["거부"])
+  h1 --> ok(["200 · 강의 2건"])
+
+  classDef safe fill:#E1F5EE,stroke:#0F6E56,color:#04342C
+  classDef check fill:#FAEEDA,stroke:#854F0B,color:#412402
+  class g,out1,h1,ok safe
+  class q check
+  style pep fill:none,stroke:#0F6E56
+```
+
+3절의 그림과 다른 점은 노란 질문 하나입니다. 주소가 아니라 핸들러를 봅니다.
 
 ## 5. 조치 뒤 재확인
 
-작성 전. `v2-fix-2`에서 2절과 같은 요청을 다시 보낸 결과를 적습니다.
+`v2-fix-2`를 로컬에서 띄우고 2절과 같은 스크립트를 실행한 결과입니다.
+
+```bash
+node .github/scripts/defects/defect-2.mjs --expect blocked
+```
+
+```
+결함 2: 수강생 명단(GET /courses/:id/enrollments)의 인증·인가
+- GET /courses (토큰 없음, 공개가 맞음)
+    → 상태 200 · 2건 · 필드: id, title
+- GET /courses/c1/enrollments (토큰 없음)
+    → 상태 401 · 필드: error
+- GET /courses/c1/enrollments (학생 토큰)
+    → 상태 403 · 필드: error
+- GET /courses/c1/enrollments (다른 강의의 강사 토큰)
+    → 상태 403 · 필드: error
+판정: 차단
+```
+
+| 확인 | 결함 상태 (`v2-defect-2`) | 조치 뒤 (`v2-fix-2`) |
+|---|---|---|
+| 강의 목록, 토큰 없음 | 200, 2건 | 200, 2건 |
+| 명단, 토큰 없음 | 200, 2건 | 401 |
+| 명단, 학생 토큰 | 200, 2건 | 403 |
+| 명단, 다른 강의의 강사 토큰 | 200, 2건 | 403 |
+| 명단, 담당 강사와 관리자 토큰 | 200 | 200 |
+| `GET /courses/`, `GET /Courses` (토큰 없음) | 200, 401 | 200, 200 |
+| `GET /courses/c1/enrollments/` (토큰 없음) | 200 | 401 |
+| 결함 1의 재현 스크립트 | 차단 | 차단 |
+| API 테스트 | 76건 중 6건 실패 | 76건 통과 |
+
+실패하던 6건은 3.4절의 테스트 1~5와 결함 1에서 넣은 경로 전수 검사입니다.
 
 ## 6. Burp Suite 진단 기록
 
