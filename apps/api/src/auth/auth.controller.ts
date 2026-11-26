@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Header, HttpCode, Post } from '@nestjs/common';
+import { Authorize } from '../authz/authorize.decorator.js';
 import { AuthService, type LoginResult } from './auth.service.js';
 import { type AuthUser, CurrentUser } from './current-user.js';
 import { LoginDto } from './login.dto.js';
@@ -19,6 +20,7 @@ export class AuthController {
 
   // 토큰의 주인이 누구이고 지금 역할이 무엇인지 돌려준다.
   @Get('me')
+  @Authorize('self:read')
   @Header('Cache-Control', 'no-store')
   me(@CurrentUser() user: AuthUser): AuthUser {
     return { id: user.id, role: user.role };

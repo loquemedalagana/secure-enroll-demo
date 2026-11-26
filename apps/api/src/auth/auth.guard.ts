@@ -2,12 +2,11 @@ import { type CanActivate, type ExecutionContext, Injectable, UnauthorizedExcept
 import { Reflector } from '@nestjs/core';
 import { AuthService } from './auth.service.js';
 import type { AuthedRequest } from './current-user.js';
-import { IS_PUBLIC } from './public.decorator.js';
+import { isPublic } from './is-public.js';
 
 const BEARER = /^Bearer ([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)$/;
 
-// 전역 인증 Guard. @Public이 붙지 않은 모든 경로에서 토큰을 요구한다.
-// 새 경로를 만들 때 아무것도 붙이지 않으면 닫힌 상태가 된다.
+// 인증 Guard. 모든 경로에 적용된다(app.module.ts). 공개 경로가 아니면 토큰을 요구한다.
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
@@ -16,11 +15,7 @@ export class AuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const isPublic = this.reflector.getAllAndOverride<boolean | undefined>(IS_PUBLIC, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
-    if (isPublic === true) return true;
+    if (isPublic(this.reflector, context)) return true;
 
     const req = context.switchToHttp().getRequest<AuthedRequest>();
     const header = req.headers.authorization;

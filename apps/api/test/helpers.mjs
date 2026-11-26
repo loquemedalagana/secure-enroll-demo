@@ -49,3 +49,14 @@ export function runUntilExit(env) {
     });
   });
 }
+
+// 더미 계정으로 로그인해 Authorization 헤더 값을 돌려준다. 비밀번호는 시드 규칙("<username>-pass")이다.
+export async function bearerFor(base, username) {
+  const res = await fetch(`${base}/auth/login`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ username, password: `${username}-pass` }),
+  });
+  if (res.status !== 200) throw new Error(`로그인 실패: ${username} (${res.status})`);
+  return `Bearer ${(await res.json()).token}`;
+}
