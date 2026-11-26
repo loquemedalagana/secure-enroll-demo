@@ -109,15 +109,17 @@ flowchart LR
 
 여기서 경로는 API가 받는 요청 주소(메서드와 URL)입니다. 이 API에 등록된 경로는 7개입니다.
 
-| 경로 | 컨트롤러 | 토큰 없이 요청하면 |
+| 경로 | 토큰 없이 요청하면 | 코드에서 확인하는 곳 |
 |---|---|---|
-| `GET /health/live` | Health | 열려 있어야 함 (공개) |
-| `GET /health/ready` | Health | 열려 있어야 함 (공개) |
-| `POST /auth/login` | Auth | 열려 있어야 함 (공개) |
-| `GET /auth/me` | Auth | 401 |
-| `GET /enrollments` | Enrollments | 401 |
-| `GET /enrollments/:id` | Enrollments | 401 |
-| `GET /admin/enrollments` | Admin | 401이어야 하는데 지금은 200 (결함 1) |
+| `GET /health/live` | 열려 있어야 함 (공개) | [`health.controller.ts` 6행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/health/health.controller.ts#L6-L7): 컨트롤러에 `@Public()` |
+| `GET /health/ready` | 열려 있어야 함 (공개) | 위와 같음 |
+| `POST /auth/login` | 열려 있어야 함 (공개) | [`auth.controller.ts` 15행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/auth/auth.controller.ts#L15-L16): 핸들러에 `@Public()` |
+| `GET /auth/me` | 401 | [`auth.controller.ts` 10행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/auth/auth.controller.ts#L10-L11): 컨트롤러에 `@UseGuards` |
+| `GET /enrollments` | 401 | [`enrollments.controller.ts` 8행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/enrollments/enrollments.controller.ts#L8-L9): 컨트롤러에 `@UseGuards` |
+| `GET /enrollments/:id` | 401 | 위와 같음 |
+| `GET /admin/enrollments` | 401이어야 하는데 지금은 200 (결함 1) | [`admin.controller.ts` 5행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/enrollments/admin.controller.ts#L5-L11): `@Controller` 위에 `@UseGuards`가 없음 |
+
+링크는 태그 `v2-defect-1`의 코드를 가리킵니다. Guard를 전역으로 등록하지 않았다는 것은 [`auth.module.ts` 9~10행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/auth/auth.module.ts#L9-L10)에서 확인합니다. 실행해서 확인하려면 2절의 재현 스크립트를 쓰거나, API 테스트(`apps/api/test/guard-coverage.test.mjs`)의 세 번째 테스트를 봅니다. 이 테스트는 서버가 등록한 경로를 전부 읽어 토큰 없이 요청합니다.
 
 고칠 방법은 두 가지입니다.
 
