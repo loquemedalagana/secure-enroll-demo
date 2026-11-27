@@ -171,7 +171,7 @@ flowchart LR
 
 ### 3.4 결함을 잡는 테스트
 
-`apps/api/test/courses.test.mjs`에 "강의 검색 1~5"를 더했습니다. 테스트는 웹을 거치지 않고 띄워 놓은 API에 직접 요청하고, API는 실제 PostgreSQL에 연결되어 있습니다. DB를 흉내 내면 쿼리가 실제로 구문 분석되지 않아서 이 결함이 드러나지 않습니다.
+`apps/api/test/courses.test.mjs`에 "강의 검색 1~5"를 더했습니다. 테스트는 웹을 거치지 않고 띄워 놓은 API에 직접 요청하고, API는 실제 PostgreSQL에 연결되어 있습니다. DB를 흉내 내면 쿼리가 실제로 구문 분석되지 않아서 이 취약점이 드러나지 않습니다.
 
 ```mermaid
 flowchart LR
@@ -241,7 +241,7 @@ flowchart LR
 | 구성 요소 | 이 결함에서 | 코드에서 확인하는 곳 |
 |---|---|---|
 | 주체 | 로그인하지 않은 요청 | |
-| 객체 | 열어 준 것은 강의의 id와 제목입니다. **쿼리가 바뀌어 사용자와 신청까지 객체가 됩니다. 결함은 여기입니다** | [`courses/courses.service.ts` 17~21행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-6/apps/api/src/courses/courses.service.ts#L17-L21) |
+| 객체 | 열어 준 것은 강의의 id와 제목입니다. **쿼리가 바뀌어 사용자와 신청까지 객체가 됩니다. 취약점은 여기서 생깁니다** | [`courses/courses.service.ts` 17~21행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-6/apps/api/src/courses/courses.service.ts#L17-L21) |
 | 시행 (PEP) | 정상. `@Public`이 붙은 핸들러라 통과시킵니다 | `auth/auth.guard.ts`, `authz/authz.guard.ts` |
 | 판단 (PE) | 호출되지 않습니다. 공개 경로라 판단할 것이 없습니다 | `authz/policy.ts` |
 
@@ -558,7 +558,7 @@ node .github/scripts/defects/defect-6.mjs --expect blocked
 | 테스트를 추가한 뒤 | `abc8eb0` | 실패 (99건 중 5건) | [45940574333](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45940574333) |
 | 수정한 뒤 | `159648f` | 통과 (99건) | [45948629507](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45948629507) |
 
-첫 줄이 결함 3과 다릅니다. 결함 3은 구현만 올려도 전에 넣어 둔 테스트가 실패했지만, 결함 6은 SQL 인젝션이 든 코드가 테스트 94건과 CI를 그대로 통과했습니다. 정상인 검색어만 보내는 테스트로는 이 결함이 드러나지 않습니다.
+첫 줄이 결함 3과 다릅니다. 결함 3은 구현만 올려도 전에 넣어 둔 테스트가 실패했지만, 결함 6은 SQL 인젝션이 든 코드가 테스트 94건과 CI를 그대로 통과했습니다. 정상인 검색어만 보내는 테스트로는 이 취약점이 드러나지 않습니다.
 
 셋째 줄의 실행은 수정 커밋(`085f3a4`)과 그 뒤의 문서 커밋 2개를 함께 올린 뒤의 것입니다. 수정 커밋만 따로 돈 실행은 없습니다.
 
