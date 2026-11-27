@@ -40,7 +40,7 @@ export class EnrollmentsService {
         return tx.enrollment.create({ data: { userId, courseId, phone }, select: VIEW });
       });
     } catch (error) {
-      // (사용자, 강의) 유일 제약에 걸린 경우다. 같은 학생이 같은 강의를 다시 신청했다.
+      // 같은 학생이 같은 강의를 다시 신청하면 (사용자, 강의) 고유 제약 조건에 걸려 이 오류가 난다.
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') throw new ConflictException();
       throw error;
     }
