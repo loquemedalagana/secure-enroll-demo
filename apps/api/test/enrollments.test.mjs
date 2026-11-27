@@ -32,7 +32,7 @@ test('내 신청 목록: 강사는 자기 강의의 신청만, 관리자는 전�
   assert.deepEqual(await ids(await get('/enrollments', auth.admin1)), ['e1', 'e2', 'e3']);
 });
 
-test('신청 한 건: 학생은 본인 것 200, 남의 것 403', async () => {
+test('신청 한 건: 학생은 본인의 신청 200, 다른 사용자의 신청 403', async () => {
   const mine = await get('/enrollments/e1', auth.student1);
   assert.equal(mine.status, 200);
   assert.equal((await mine.json()).userId, 'u1');

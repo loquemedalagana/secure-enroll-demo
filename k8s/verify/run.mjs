@@ -59,7 +59,7 @@ const matrix = [
   { from: 'gateway', who: '비로그인', what: `GET ${ADMIN_API}`, run: http(NS, 'gateway', null, ADMIN_API), expect: '401', layer: '앱' },
   { from: 'gateway', who: 'student1', what: `GET ${ADMIN_API}`, run: http(NS, 'gateway', 'student1', ADMIN_API), expect: '403', layer: '앱' },
   { from: 'gateway', who: 'student1', what: 'GET /api/enrollments/e1 (본인 신청)', run: http(NS, 'gateway', 'student1', '/api/enrollments/e1'), expect: '200', layer: '허용' },
-  { from: 'gateway', who: 'student1', what: 'GET /api/enrollments/e2 (남의 신청)', run: http(NS, 'gateway', 'student1', '/api/enrollments/e2'), expect: '403', layer: '앱' },
+  { from: 'gateway', who: 'student1', what: 'GET /api/enrollments/e2 (다른 사용자의 신청)', run: http(NS, 'gateway', 'student1', '/api/enrollments/e2'), expect: '403', layer: '앱' },
   { from: 'gateway', who: 'instructor1', what: 'GET /api/enrollments/e3 (다른 강사 강의)', run: http(NS, 'gateway', 'instructor1', '/api/enrollments/e3'), expect: '403', layer: '앱' },
   { from: 'gateway', who: 'admin1', what: `GET ${ADMIN_API}`, run: http(NS, 'gateway', 'admin1', ADMIN_API), expect: '200', layer: '허용' },
   ...netRows({ reach: 'TIMEOUT', api: 'TIMEOUT', closed: 'TIMEOUT' }),
