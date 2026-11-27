@@ -75,9 +75,9 @@ node .github/scripts/defects/defect-8.mjs
 결함 8: 신청 생성(POST /enrollments)의 신청자
 대상: http://127.0.0.1:4000
 - POST /enrollments (student1의 토큰, request body의 userId: u2)
-    → 상태 201 · u2의 신청으로 저장됨
+    → 상태 201 · u2의 이름으로 신청됨
 - POST /enrollments (student1의 토큰, request body의 userId: a1, 관리자의 id)
-    → 상태 201 · a1의 신청으로 저장됨
+    → 상태 201 · a1의 이름으로 신청됨
 - GET /enrollments (student2의 토큰) 요청 전과 후
     → 2건 → 3건
 판정: 취약
@@ -154,8 +154,8 @@ flowchart LR
   req --> g --> h
   h == "body의 userId" ==> db
 
-  db -.- t1["테스트 1<br/>다른 학생의 신청으로<br/>저장되지 않는가"]
-  db -.- t2["테스트 2<br/>관리자의 신청으로<br/>저장되지 않는가"]
+  db -.- t1["테스트 1<br/>다른 학생의 이름으로<br/>신청되지 않는가"]
+  db -.- t2["테스트 2<br/>관리자의 이름으로<br/>신청되지 않는가"]
   db -.- t3["테스트 3<br/>새 신청의 소유자가<br/>모두 요청한<br/>사람인가"]
 
   classDef safe fill:#E1F5EE,stroke:#0F6E56,color:#04342C
@@ -174,8 +174,8 @@ flowchart LR
 
 | 테스트 | 보내는 요청 | 개발 관점: 무엇을 확인하나 | 보안 관점: 무엇을 지키나 |
 |---|---|---|---|
-| 1 다른 학생의 id를 request body에 넣어도 그 학생의 신청으로 저장되지 않음 | `student3`의 토큰, request body `userId: u4` | `u4`의 신청이 DB에 0건인지 | 객체의 속성(소유자). 같은 역할의 다른 사용자 |
-| 2 관리자의 id를 request body에 넣어도 관리자의 신청으로 저장되지 않음 | `student3`의 토큰, request body `userId: a1` | `a1`의 신청이 DB에 0건인지 | 객체의 속성(소유자). 역할이 다른 사용자 |
+| 1 다른 학생의 id를 request body에 넣어도 그 학생의 이름으로 신청되지 않음 | `student3`의 토큰, request body `userId: u4` | `u4`의 신청이 DB에 0건인지 | 객체의 속성(소유자). 같은 역할의 다른 사용자 |
+| 2 관리자의 id를 request body에 넣어도 관리자의 이름으로 신청되지 않음 | `student3`의 토큰, request body `userId: a1` | `a1`의 신청이 DB에 0건인지 | 객체의 속성(소유자). 역할이 다른 사용자 |
 | 3 request body의 userId가 무엇이든 신청의 소유자는 요청한 사람 | `student3`의 토큰, request body의 `userId`를 `u3`, `u4`, `u5`, `i1`, `a1`로 바꿔 5번 | 새로 생긴 신청 중 소유자가 `u3`이 아닌 것이 0건인지 | 주체와 소유자의 일치. 어떤 값이 와도 지켜져야 하는 성질 |
 
 테스트는 거부하는 방식을 정하지 않습니다. 상태 코드는 201이 아닌지만 봅니다. request body의 `userId`를 토큰과 비교해 403으로 거부할 수도 있고, request body에서 `userId`를 없애 400으로 거부할 수도 있습니다. 어느 쪽으로 고칠지는 4.1절에서 방안을 적용해 보고 정합니다.
@@ -196,7 +196,7 @@ flowchart LR
 
 출력의 테스트 이름은 이 커밋 시점의 것입니다.
 
-테스트 3에서 5번 보낸 요청 중 4건이 다른 사용자의 신청으로 저장됐습니다. 테스트는 끝날 때 새로 생긴 신청을 모두 삭제합니다.
+테스트 3에서 5번 보낸 요청 중 4건이 다른 사용자의 이름으로 신청됐습니다. 테스트는 끝날 때 새로 생긴 신청을 모두 삭제합니다.
 
 ### 3.5 보안 관점: 접근통제 구성 요소로 본 결함
 
@@ -431,9 +431,9 @@ node .github/scripts/defects/defect-8.mjs --expect blocked
 결함 8: 신청 생성(POST /enrollments)의 신청자
 대상: http://127.0.0.1:4000
 - POST /enrollments (student1의 토큰, request body의 userId: u2)
-    → 상태 400 · 저장되지 않음
+    → 상태 400 · 신청되지 않음
 - POST /enrollments (student1의 토큰, request body의 userId: a1, 관리자의 id)
-    → 상태 400 · 저장되지 않음
+    → 상태 400 · 신청되지 않음
 - GET /enrollments (student2의 토큰) 요청 전과 후
     → 2건 → 2건
 판정: 차단
@@ -441,8 +441,8 @@ node .github/scripts/defects/defect-8.mjs --expect blocked
 
 | 확인 | 결함 상태 (`v2-defect-8`) | 조치 뒤 (`v2-fix-8`) |
 |---|---|---|
-| request body에 다른 학생의 id | 201, 그 학생의 신청으로 저장됨 | 400, 저장되지 않음 |
-| request body에 관리자의 id | 201, 관리자의 신청으로 저장됨 | 400, 저장되지 않음 |
+| request body에 다른 학생의 id | 201, 그 학생의 이름으로 신청됨 | 400, 신청되지 않음 |
+| request body에 관리자의 id | 201, 관리자의 이름으로 신청됨 | 400, 신청되지 않음 |
 | request body에 자기 id | 201 | 400 (request body가 `userId`를 받지 않음) |
 | request body에 `userId` 없이 | 400 | 201, 토큰의 사용자의 신청 |
 | 존재하지 않는 id (`U4`) | 500 | 400 |
