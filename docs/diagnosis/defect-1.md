@@ -168,7 +168,7 @@ flowchart LR
 | 객체 | 전체 신청 목록(사용자 id, 강의 id, 전화번호) | 그대로 나갑니다 | [`enrollments/enrollments.service.ts 26행`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/enrollments/enrollments.service.ts#L26): `listAll()` |
 | 행위 | `admin:read`. 핸들러에 `@Authorize`로 적혀 있습니다 | 적혀 있지만 읽는 곳이 없습니다 | [`enrollments/admin.controller.ts 11행`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/enrollments/admin.controller.ts#L11) |
 | 판단 (PE) | `can()`. 관리자만 허용합니다 | 불리지 않습니다. 규칙 자체는 맞습니다 | [`authz/policy.ts 28~29행`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/authz/policy.ts#L28-L29) |
-| 시행 (PEP) | 인증 Guard와 인가 Guard | **이 경로에 없습니다. 결함은 여기입니다** | [`enrollments/admin.controller.ts 5행`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/enrollments/admin.controller.ts#L5): `@Controller` 위에 `@UseGuards`가 없음 |
+| 시행 (PEP) | 인증 Guard와 인가 Guard | **두 Guard 모두 이 경로에 적용되지 않습니다. 컨트롤러에 `@UseGuards`를 붙이지 않은 것이 결함이고, 그 결과 전체 신청 목록이 인증 없이 열리는 취약점(인증 누락)이 생깁니다** | [`enrollments/admin.controller.ts 5행`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/enrollments/admin.controller.ts#L5): `@Controller` 위에 `@UseGuards`가 없음 |
 | 접근통제 모델 | RBAC. 역할만 보고 정합니다 | 적용되지 않습니다 | 판단과 같은 줄 |
 
 정리하면 규칙(판단)은 맞는데 그 규칙을 적용하는 자리(시행)가 비어 있었습니다. 그래서 분류가 "권한을 잘못 줬다"(접근 통제 실패)가 아니라 "확인 자체를 하지 않았다"(인증 누락, CWE-306)입니다.
