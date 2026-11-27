@@ -75,9 +75,9 @@ node .github/scripts/defects/defect-8.mjs
 결함 8: 신청 생성(POST /enrollments)의 신청자
 대상: http://127.0.0.1:4000
 - POST /enrollments (student1의 토큰, request body의 userId: u2)
-    → 상태 201 · u2의 신청이 생성됨
+    → 상태 201 · u2의 신청으로 저장됨
 - POST /enrollments (student1의 토큰, request body의 userId: a1, 관리자의 id)
-    → 상태 201 · a1의 신청이 생성됨
+    → 상태 201 · a1의 신청으로 저장됨
 - GET /enrollments (student2의 토큰) 요청 전과 후
     → 2건 → 3건
 판정: 취약
@@ -429,9 +429,9 @@ node .github/scripts/defects/defect-8.mjs --expect blocked
 결함 8: 신청 생성(POST /enrollments)의 신청자
 대상: http://127.0.0.1:4000
 - POST /enrollments (student1의 토큰, request body의 userId: u2)
-    → 상태 400 · 생성되지 않음
+    → 상태 400 · 저장되지 않음
 - POST /enrollments (student1의 토큰, request body의 userId: a1, 관리자의 id)
-    → 상태 400 · 생성되지 않음
+    → 상태 400 · 저장되지 않음
 - GET /enrollments (student2의 토큰) 요청 전과 후
     → 2건 → 2건
 판정: 차단
@@ -439,8 +439,8 @@ node .github/scripts/defects/defect-8.mjs --expect blocked
 
 | 확인 | 결함 상태 (`v2-defect-8`) | 조치 뒤 (`v2-fix-8`) |
 |---|---|---|
-| request body에 다른 학생의 id | 201, 그 학생의 신청이 생성됨 | 400, 생성되지 않음 |
-| request body에 관리자의 id | 201, 관리자의 신청이 생성됨 | 400, 생성되지 않음 |
+| request body에 다른 학생의 id | 201, 그 학생의 신청으로 저장됨 | 400, 저장되지 않음 |
+| request body에 관리자의 id | 201, 관리자의 신청으로 저장됨 | 400, 저장되지 않음 |
 | request body에 자기 id | 201 | 400 (request body가 `userId`를 받지 않음) |
 | request body에 `userId` 없이 | 400 | 201, 토큰의 사용자의 신청 |
 | 존재하지 않는 id (`U4`) | 500 | 400 |
