@@ -205,7 +205,7 @@ flowchart LR
 | 주체 | 정상. 토큰으로 검증한 `student1` | `auth/auth.guard.ts` |
 | 시행 (PEP) | 정상. 토큰이 없으면 401, 학생이 아니면 403입니다 | `auth/auth.guard.ts`, `authz/authz.guard.ts` |
 | 판단 (PE) | 정상. `can(student1, 'enrollment:create')`는 `true`를 반환합니다. 누구의 신청인지는 판단의 입력에 없습니다 | `authz/policy.ts` |
-| 객체의 속성 (소유자) | **핸들러가 이 값을 클라이언트가 보낸 request body에서 읽습니다. 결함은 여기입니다. 이 때문에 다른 사용자의 이름으로 신청할 수 있는 취약점(IDOR)이 생깁니다** | [`enrollments/enrollments.controller.ts` 23~25행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-8/apps/api/src/enrollments/enrollments.controller.ts#L23-L25) |
+| 객체의 속성 (소유자) | **핸들러가 이 값을 클라이언트가 보낸 request body에서 읽습니다. 이 부분이 결함이고, 그 결과 다른 사용자의 이름으로 신청할 수 있는 취약점(IDOR)이 생깁니다** | [`enrollments/enrollments.controller.ts` 23~25행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-8/apps/api/src/enrollments/enrollments.controller.ts#L23-L25) |
 
 결함 1과 2는 시행 지점이 요청을 막지 못한 경우였고, 결함 6은 시행 지점이 열어 준 범위 밖의 객체를 쿼리가 읽은 경우였습니다. 결함 8에서는 시행과 판단이 모두 맞게 끝납니다. 그 뒤에 생성되는 객체의 소유자가 판단에 쓰인 주체와 다른 값으로 정해집니다.
 
