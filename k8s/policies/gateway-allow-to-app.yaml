@@ -1,4 +1,4 @@
-# gateway는 앱의 3000번으로만 나간다. 받는 쪽 허용만으로는 부족하다(보내는 쪽도 기본 거부이므로).
+# gateway는 앱의 3000번으로만 나간다. 앱의 Ingress 허용만으로는 부족하다(gateway의 Egress도 기본 거부이므로).
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
