@@ -64,7 +64,7 @@ git diff vulnerable fixed -- app lib middleware.ts   # 인가 구조가 어떻�
 git diff vulnerable fixed -- tests                   # 무엇으로 검증했는지
 ```
 
-v2의 결함은 결함마다 태그 한 쌍으로 봅니다. 지금은 결함 1~3의 태그가 있고, 결함을 다루는 PR마다 한 쌍씩 생깁니다.
+v2의 결함은 결함마다 태그 한 쌍으로 봅니다. 지금은 결함 1~3과 6의 태그가 있고, 결함을 다루는 PR마다 한 쌍씩 생깁니다.
 ```bash
 git diff v2-defect-N v2-fix-N -- apps                # 결함 N을 어떻게 고쳤는지
 git checkout v2-defect-N                             # 결함 N의 상태 재현

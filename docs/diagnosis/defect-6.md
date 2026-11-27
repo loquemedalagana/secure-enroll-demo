@@ -438,9 +438,104 @@ flowchart LR
 
 **이 PR에서 하지 않는 것 (DB 계정의 권한 줄이기)**: API가 DB에 접속하는 계정은 모든 테이블을 읽을 수 있습니다. 검색에 필요한 것은 `courses`뿐이지만 같은 계정으로 로그인과 신청 조회도 하므로, 권한을 줄이려면 계정을 나눠야 합니다. 인젝션을 막는 조치는 아니고, 뚫렸을 때 읽히는 범위를 줄이는 장치입니다.
 
+### 4.2 적용한 조치
+
+방안 2를 커밋 하나로 적용했습니다. 바뀐 것은 `search` 한 곳입니다: [`courses/courses.service.ts` 17~21행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-fix-6/apps/api/src/courses/courses.service.ts#L17-L21).
+
+```diff
++  // 검색어는 쿼리 문자열에 넣지 않고 매개변수로 넘긴다. $queryRawUnsafe로 바꾸지 않는다.
+   search(q: string): Promise<CourseView[]> {
+-    return this.prisma.$queryRawUnsafe<CourseView[]>(
+-      `SELECT id, title FROM courses WHERE title ILIKE '%${q}%' ORDER BY id ASC`,
+-    );
++    return this.prisma.$queryRaw<CourseView[]>`
++      SELECT id, title FROM courses WHERE title ILIKE ${`%${q}%`} ORDER BY id ASC`;
+   }
+```
+
+SQL은 그대로이고 검색어를 넘기는 방식만 바뀌었습니다. 앞뒤의 `%`는 쿼리가 아니라 값에 붙입니다. 플레이스홀더를 따옴표 안에 두면 DB가 그것을 플레이스홀더가 아니라 글자로 읽기 때문입니다.
+
+```mermaid
+flowchart LR
+  req(["GET /courses<br/>?q=검색어<br/>토큰 없음"])
+
+  subgraph api["API"]
+    g["인증·인가 Guard<br/>@Public이라 통과"]
+    s["강의 검색<br/>쿼리와 검색어를<br/>따로 넘김"]
+  end
+
+  subgraph db["PostgreSQL"]
+    c[("courses<br/>제목")]
+    u[("users<br/>비밀번호 해시")]
+    e[("enrollments<br/>전화번호")]
+  end
+
+  req --> g --> s
+  s -- "쿼리: … ILIKE $1<br/>값: 검색어" --> c
+  s --> res(["200 · 검색어가<br/>든 강의만"])
+
+  classDef safe fill:#E1F5EE,stroke:#0F6E56,color:#04342C
+  classDef neutral fill:#f6f8fa,stroke:#57606a,color:#24292f
+  class g,s,c safe
+  class u,e neutral
+  style api fill:none,stroke:#57606a
+  style db fill:none,stroke:#57606a
+  linkStyle 2 stroke:#0F6E56,stroke-width:2px
+```
+
+3절의 그림에서 `users`와 `enrollments`로 가던 화살표가 없어졌습니다. 검색어에 무엇이 들어 있든 실행되는 쿼리는 `courses`를 읽는 한 가지입니다.
+
 ## 5. 조치 뒤 재확인
 
-작성 전.
+`v2-fix-6`을 로컬에서 띄우고 2절과 같은 스크립트를 실행한 결과입니다.
+
+```bash
+node .github/scripts/defects/defect-6.mjs --expect blocked
+```
+
+```
+결함 6: 강의 검색(GET /courses?q=)의 검색어 처리
+대상: http://127.0.0.1:4000
+- 검색어: 제목에 없는 말 (토큰 없음, 0건이 맞음)
+    → 상태 200 · 0건
+- 검색어: 작은따옴표 하나 (')
+    → 상태 200 · 0건
+- 검색어: 제목에 없는 말 + ' OR '%'='
+    → 상태 200 · 0건 · 강의 0건
+- 검색어: 제목에 없는 말 + UNION SELECT … FROM users
+    → 상태 200 · 0건 · 사용자 테이블에서 온 행 0건(계정 이름과 비밀번호 해시)
+- 검색어: 제목에 없는 말 + UNION SELECT … FROM enrollments
+    → 상태 200 · 0건 · 신청 테이블에서 온 행 0건(신청 id와 전화번호)
+판정: 차단
+```
+
+| 확인 | 결함 상태 (`v2-defect-6`) | 조치 뒤 (`v2-fix-6`) |
+|---|---|---|
+| 작은따옴표 하나 | 500 | 200, 0건 |
+| 조건을 항상 참으로 만드는 검색어 | 강의 2건 | 0건 |
+| `UNION SELECT … FROM users` | 5건 (계정 이름과 비밀번호 해시) | 0건 |
+| `UNION SELECT … FROM enrollments` | 3건 (신청 id와 전화번호) | 0건 |
+| 정상 검색어 (`보안`) | 1건 | 1건 (바뀐 것 없음) |
+| 검색어가 DB로 가는 방식 | 쿼리 문자열 안 | 플레이스홀더 `$1`의 값 |
+| 수정 태그의 API 테스트 99건 | 5건 실패 | 모두 통과 |
+
+마지막 줄은 두 태그를 내려받아 `defects.yml`과 같은 순서로 로컬에서 돌린 결과입니다. 결함 태그의 코드에 수정 태그의 테스트를 돌리면 3.4절의 테스트 5건이 실패하고, 수정 태그에서는 99건이 모두 통과합니다.
+
+### CI 실행 기록
+
+이 결함을 다룬 PR에서 실제로 돈 실행입니다.
+
+| 시점 | 커밋 | `api` 잡 | 실행 |
+|---|---|---|---|
+| 결함이 든 구현을 올린 뒤 | `5997a97` | 통과 (94건. 결함을 잡는 테스트가 없었음) | [45934744786](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45934744786) |
+| 테스트를 추가한 뒤 | `abc8eb0` | 실패 (99건 중 5건) | [45940574333](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45940574333) |
+| 수정한 뒤 | `159648f` | 통과 (99건) | [45948629507](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45948629507) |
+
+첫 줄이 결함 3과 다릅니다. 결함 3은 구현만 올려도 전에 넣어 둔 테스트가 실패했지만, 결함 6은 SQL 인젝션이 든 코드가 테스트 94건과 CI를 그대로 통과했습니다. 정상인 검색어만 보내는 테스트로는 이 결함이 드러나지 않습니다.
+
+셋째 줄의 실행은 수정 커밋(`085f3a4`)과 그 뒤의 문서 커밋 2개를 함께 올린 뒤의 것입니다. 수정 커밋만 따로 돈 실행은 없습니다.
+
+실행의 로그는 GitHub의 보존 기간(기본 90일)이 지나면 지워집니다. 같은 실패와 통과는 `defects.yml`이 실행될 때마다 다시 만들어집니다.
 
 ## 6. Burp Suite 진단 기록
 
