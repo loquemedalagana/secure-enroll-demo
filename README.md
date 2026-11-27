@@ -15,17 +15,17 @@
 | 구성 | 위치 | 상태 |
 |---|---|---|
 | 웹 (Next.js 14) | `apps/web` | v1의 앱 그대로입니다. 인메모리 데이터로 동작하고 아직 API를 호출하지 않습니다 |
-| API (Nest.js 12) | `apps/api` | 헬스 체크, 로그인, 토큰 발급·검증, 전역 인증·인가 Guard, 신청 조회, 강의 목록·검색과 수강생 명단, 요청 로그. 테스트 104건 |
+| API (Nest.js 12) | `apps/api` | 헬스 체크, 로그인, 토큰 발급·검증, 전역 인증·인가 Guard, 신청 조회·생성·취소, 강의 목록·검색과 수강생 명단, 요청 로그. 테스트 134건 |
 | DB (PostgreSQL 18) | `compose.yaml`, `apps/api/prisma` | Prisma 마이그레이션과 더미 시드 |
 | CI | `.github/workflows/ci.yml`, `.github/workflows/defects.yml` | `ci`: `web`, `api`, `audit`(앱별), `netpol`. `defects`: 결함마다 결함 태그와 수정 태그를 띄워 재현 |
 | 네트워크 정책 | `k8s/` | kind와 Cilium으로 웹 앱에 적용해 검증 |
-| v2의 의도된 결함 | [docs/v2-defects.md](docs/v2-defects.md) | 8개 중 4개를 다뤘습니다. 진단 보고서: [결함 1](docs/diagnosis/defect-1.md), [결함 2](docs/diagnosis/defect-2.md), [결함 3](docs/diagnosis/defect-3.md), [결함 6](docs/diagnosis/defect-6.md) |
+| v2의 의도된 결함 | [docs/v2-defects.md](docs/v2-defects.md) | 8개 중 5개를 다뤘습니다. 진단 보고서: [결함 1](docs/diagnosis/defect-1.md), [결함 2](docs/diagnosis/defect-2.md), [결함 3](docs/diagnosis/defect-3.md), [결함 6](docs/diagnosis/defect-6.md), [결함 8](docs/diagnosis/defect-8.md) |
 
-다음 순서는 신청 생성, 웹과 API 연결입니다.
+다음 순서는 웹과 API 연결입니다.
 
 ### API의 권한 표
 
-경로마다 누가 요청하면 어떤 상태 코드가 나오는지입니다. 이 표의 칸은 `apps/api/test/permission-matrix.test.mjs`가 전부 요청해서 확인합니다.
+경로마다 누가 요청하면 어떤 상태 코드가 나오는지입니다. 이 표의 칸은 `apps/api/test/permission-matrix.test.mjs`(읽기)와 `apps/api/test/enrollments-write.test.mjs`(쓰기)가 전부 요청해서 확인합니다.
 
 | 경로 | 비로그인 | 학생 | 강사 | 관리자 |
 |---|---|---|---|---|
@@ -34,6 +34,8 @@
 | `GET /enrollments/:id` | 401 | 본인의 신청 200, 남의 신청 403 | 자기 강의의 신청 200, 다른 강의의 신청 403 | 200 |
 | `GET /courses/:id/enrollments` | 401 | 403 | 자기 강의 200, 다른 강의 403 | 200 |
 | `GET /admin/enrollments` | 401 | 403 | 403 | 200 |
+| `POST /enrollments` | 401 | 201 (자기 이름으로만) | 403 | 403 |
+| `DELETE /enrollments/:id` | 401 | 본인의 신청 204, 남의 신청 403 | 403 | 204 |
 
 `GET /enrollments`는 사람마다 범위가 다릅니다. 학생은 자기 신청, 강사는 자기 강의의 신청, 관리자는 전체를 받습니다. 판단은 `apps/api/src/authz/policy.ts`의 `can()` 한 곳에서 하고, 모든 요청이 전역 Guard를 지납니다.
 
@@ -64,7 +66,7 @@ git diff vulnerable fixed -- app lib middleware.ts   # 인가 구조가 어떻�
 git diff vulnerable fixed -- tests                   # 무엇으로 검증했는지
 ```
 
-v2의 결함은 결함마다 태그 한 쌍으로 봅니다. 지금은 결함 1~3과 6의 태그가 있고, 결함을 다루는 PR마다 한 쌍씩 생깁니다.
+v2의 결함은 결함마다 태그 한 쌍으로 봅니다. 지금은 결함 1~3, 6, 8의 태그가 있고, 결함을 다루는 PR마다 한 쌍씩 생깁니다.
 ```bash
 git diff v2-defect-N v2-fix-N -- apps                # 결함 N을 어떻게 고쳤는지
 git checkout v2-defect-N                             # 결함 N의 상태 재현
@@ -91,7 +93,7 @@ cp .env.example .env
 npm ci --ignore-scripts
 npm run db:generate && npm run build
 npm run db:migrate && npm run db:seed
-npm test                           # 104건
+npm test                           # 134건
 npm start                          # http://127.0.0.1:4000/health/ready
 ```
 

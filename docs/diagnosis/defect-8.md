@@ -334,9 +334,100 @@ flowchart LR
 - API의 본문 형식이 바뀝니다. 결함 상태에서 `userId`를 보내던 호출은 자기 id를 보내도 400이 됩니다. 이 저장소에는 이 경로를 호출하는 클라이언트가 아직 없습니다.
 - 관리자가 학생 대신 신청하는 기능은 이 형식으로는 만들 수 없습니다. 필요해지면 별도의 행위와 경로로 만들어야 합니다.
 
+### 4.2 적용한 조치
+
+방안 2를 커밋 하나로 적용했습니다. 바뀐 곳은 두 파일입니다.
+
+| 파일 | 바꾼 것 |
+|---|---|
+| [`enrollments/create-enrollment.dto.ts`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-fix-8/apps/api/src/enrollments/create-enrollment.dto.ts) | 본문의 형식에서 `userId`를 없앰. 보내면 선언하지 않은 필드라 400 |
+| [`enrollments/enrollments.controller.ts` 24~26행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-fix-8/apps/api/src/enrollments/enrollments.controller.ts#L24-L26) | 핸들러가 `@CurrentUser`로 받은 사용자의 id를 서비스에 넘김 |
+
+```diff
+-  create(@Body() body: CreateEnrollmentDto): Promise<EnrollmentView> {
+-    return this.enrollments.create(body.userId, body.courseId, body.phone);
++  create(@CurrentUser() user: AuthUser, @Body() body: CreateEnrollmentDto): Promise<EnrollmentView> {
++    return this.enrollments.create(user.id, body.courseId, body.phone);
+   }
+```
+
+`@CurrentUser`가 돌려주는 값은 인증 Guard가 토큰의 서명과 만료를 확인하고 DB에서 읽은 사용자입니다. 인가 Guard가 판단에 쓰는 주체와 같은 값입니다.
+
+```mermaid
+flowchart LR
+  req(["POST /enrollments<br/>토큰: student1<br/>본문: 강의,<br/>전화번호"])
+
+  subgraph api["API"]
+    a["인증 Guard<br/>토큰으로 u1 확인"]
+    z["인가 Guard<br/>학생의 신청 생성<br/>허용"]
+    h["신청 생성 핸들러<br/>토큰의 사용자로<br/>저장"]
+  end
+
+  db[("enrollments")]
+
+  req --> a --> z --> h
+  a -. "u1" .-> h
+  h == "userId: u1" ==> db
+  h --> res(["201 · u1의 신청"])
+
+  classDef safe fill:#E1F5EE,stroke:#0F6E56,color:#04342C
+  classDef neutral fill:#f6f8fa,stroke:#57606a,color:#24292f
+  class a,z,h safe
+  class db neutral
+  style api fill:none,stroke:#57606a
+  linkStyle 4 stroke:#0F6E56,stroke-width:3px
+```
+
+3절의 그림에서는 저장되는 `userId`가 본문에서 왔습니다. 조치 뒤에는 인증 Guard가 확인한 값에서 옵니다. 본문에는 신청자를 정하는 값이 없습니다.
+
 ## 5. 조치 뒤 재확인
 
-작성 전.
+`v2-fix-8`을 로컬에서 띄우고 2절과 같은 스크립트를 실행한 결과입니다.
+
+```bash
+node .github/scripts/defects/defect-8.mjs --expect blocked
+```
+
+```
+결함 8: 신청 생성(POST /enrollments)의 신청자
+대상: http://127.0.0.1:4000
+- POST /enrollments (student1의 토큰, 본문 userId: u2)
+    → 상태 400 · 만들어지지 않음
+- POST /enrollments (student1의 토큰, 본문 userId: a1, 관리자의 id)
+    → 상태 400 · 만들어지지 않음
+- GET /enrollments (student2의 토큰) 요청 전과 후
+    → 2건 → 2건
+판정: 차단
+```
+
+| 확인 | 결함 상태 (`v2-defect-8`) | 조치 뒤 (`v2-fix-8`) |
+|---|---|---|
+| 본문에 다른 학생의 id | 201, 그 학생의 신청이 만들어짐 | 400, 만들어지지 않음 |
+| 본문에 관리자의 id | 201, 관리자의 신청이 만들어짐 | 400, 만들어지지 않음 |
+| 본문에 자기 id | 201 | 400 (본문이 `userId`를 받지 않음) |
+| 본문에 `userId` 없이 | 400 | 201, 토큰의 사용자의 신청 |
+| 존재하지 않는 id (`U4`) | 500 | 400 |
+| 신청자를 정하는 값 | 본문의 `userId` | 토큰의 사용자 |
+| 수정 태그의 API 테스트 132건 | 12건 실패 | 모두 통과 |
+
+마지막 줄은 두 태그를 내려받아 `defects.yml`과 같은 순서로 로컬에서 돌린 결과입니다. 결함 태그의 코드에 수정 태그의 테스트를 돌렸을 때 실패하는 12건은 두 종류입니다.
+
+- 3.4절의 테스트 3건. 다른 사용자의 신청이 만들어져서 실패합니다. 결함을 잡는 것은 이 3건입니다.
+- 나머지 9건. 수정 태그의 테스트는 본문에 `userId`를 넣지 않는데, 결함 태그의 코드는 `userId`가 없으면 400을 냅니다. 본문의 형식이 달라서 실패하는 것이고 결함을 잡아서 실패하는 것이 아닙니다.
+
+### CI 실행 기록
+
+이 결함을 다룬 PR에서 실제로 돈 실행입니다.
+
+| 시점 | 커밋 | `api` 잡 | 실행 |
+|---|---|---|---|
+| 결함이 든 구현을 올린 뒤 | `519a086` | 통과 (128건. 결함을 잡는 테스트가 없었음) | [45971418187](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45971418187) |
+| 테스트를 추가한 뒤 | `7e6ea30` | 실패 (131건 중 3건) | [45973489880](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45973489880) |
+| 수정한 뒤 | `3067506` | 통과 (132건) | [45978284047](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45978284047) |
+
+첫 줄의 실행은 결함이 든 구현 커밋과 그 뒤의 문서 커밋들을 함께 올린 뒤의 것입니다. 둘째 줄은 테스트를 올린 뒤의 두 번째 실행이고, 작업 요약에 실패한 이유가 함께 나옵니다. 첫 번째 실행([45972981182](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45972981182))도 같은 3건이 실패했습니다. 셋째 줄은 수정 커밋과 문서 커밋을 함께 올린 뒤의 것입니다.
+
+실행의 로그는 GitHub의 보존 기간(기본 90일)이 지나면 지워집니다. 같은 실패와 통과는 `defects.yml`이 실행될 때마다 다시 만들어집니다.
 
 ## 6. Burp Suite 진단 기록
 
