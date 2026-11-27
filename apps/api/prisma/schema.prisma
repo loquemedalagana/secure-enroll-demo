@@ -31,6 +31,8 @@ model Course {
   id           String @id @default(uuid())
   title        String
   instructorId String
+  // 정원. 신청을 만들 때 이 수를 넘지 않게 한다(EnrollmentsService.create).
+  capacity     Int    @default(30)
 
   instructor  User         @relation(fields: [instructorId], references: [id])
   enrollments Enrollment[]
@@ -50,7 +52,9 @@ model Enrollment {
   user   User   @relation(fields: [userId], references: [id])
   course Course @relation(fields: [courseId], references: [id])
 
-  @@index([userId])
+  // 같은 사용자가 같은 강의를 두 번 신청할 수 없다. 동시에 온 요청도 DB가 한쪽을 거부한다.
+  // 이 인덱스가 userId로 찾는 조회에도 쓰인다.
+  @@unique([userId, courseId])
   @@index([courseId])
   @@map("enrollments")
 }

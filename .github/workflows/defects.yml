@@ -95,7 +95,7 @@ jobs:
           cp -R ../../../at-fix/apps/api/test test-at-fix
           npm run db:seed
           # 실패가 있는 것이 기대다. 성공과 실패는 다음 줄의 스크립트가 정한다.
-          node --test test-at-fix/*.test.mjs > "$RUNNER_TEMP/regression-defect.txt" 2>&1 || true
+          node --test --test-concurrency=1 test-at-fix/*.test.mjs > "$RUNNER_TEMP/regression-defect.txt" 2>&1 || true
           node "$GITHUB_WORKSPACE/.github/scripts/defects/regression.mjs" "$DEFECT" defect "$RUNNER_TEMP/regression-defect.txt"
 
       # 결함 태그에서 기대와 달랐더라도 수정 태그는 확인한다. 시드는 데이터를 지우고 다시 넣으므로 같은 DB를 쓴다.
@@ -117,5 +117,5 @@ jobs:
         shell: bash
         run: |
           npm run db:seed
-          node --test test/*.test.mjs > "$RUNNER_TEMP/regression-fix.txt" 2>&1 || true
+          node --test --test-concurrency=1 test/*.test.mjs > "$RUNNER_TEMP/regression-fix.txt" 2>&1 || true
           node "$GITHUB_WORKSPACE/.github/scripts/defects/regression.mjs" "$DEFECT" fix "$RUNNER_TEMP/regression-fix.txt"
