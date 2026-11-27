@@ -19,7 +19,7 @@ before(async () => {
   await db.connect();
   await cleanup();
   server = await startServer(4196);
-  for (const name of ['student1', 'student2', 'student3', 'student4', 'student5', 'student6', 'instructor1', 'admin1']) {
+  for (const name of ['student1', 'student2', 'student3', 'student4', 'student5', 'student6', 'instructor1', 'instructor2', 'admin1']) {
     auth[name] = await bearerFor(server.base, name);
   }
 });
@@ -192,5 +192,28 @@ test('신청 생성 3: 본문의 userId가 무엇이든 만들어진 신청의 �
   const { rows } = await db.query('select "userId" from enrollments where id <> all($1)', [SEEDED]);
   const notMine = rows.filter((r) => r.userId !== 'u3').length;
   assert.equal(notMine, 0, '요청한 사람(u3)이 아닌 사용자의 이름으로 만들어진 신청의 건수');
+  await cleanup();
+});
+
+// 권한 표(쓰기). 읽기 경로의 표는 permission-matrix.test.mjs에 있고, README의 권한 표와 같은 내용이다.
+// 쓰기는 요청할 때마다 DB가 바뀌므로 칸마다 상태를 새로 만들고 지운다. c4의 담당 강사는 instructor2다.
+test('권한 표: POST /enrollments → 비로그인 401, 학생 201, 강사 403, 관리자 403', async () => {
+  const expected = { 비로그인: 401, student3: 201, student4: 201, instructor1: 403, instructor2: 403, admin1: 403 };
+  for (const [who, status] of Object.entries(expected)) {
+    await cleanup();
+    assert.equal((await enroll(who, 'c4')).status, status, who);
+  }
+  await cleanup();
+});
+
+test('권한 표: DELETE /enrollments/:id → 비로그인 401, 본인 204, 다른 학생 403, 강사 403, 관리자 204', async () => {
+  // 칸마다 student3이 c4를 새로 신청하고, 그 신청을 각자의 토큰으로 취소해 본다.
+  const expected = { 비로그인: 401, student3: 204, student4: 403, instructor1: 403, instructor2: 403, admin1: 204 };
+  for (const [who, status] of Object.entries(expected)) {
+    await cleanup();
+    const created = await (await enroll('student3', 'c4')).json();
+    assert.equal((await call('DELETE', `/enrollments/${created.id}`, auth[who])).status, status, who);
+    assert.equal(await exists(created.id), status !== 204, `${who}: 신청이 남아 있는지`);
+  }
   await cleanup();
 });
