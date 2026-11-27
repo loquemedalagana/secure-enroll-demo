@@ -59,6 +59,16 @@ test('강의 목록: 선언하지 않은 쿼리 필드가 오면 400', async () 
   assert.equal((await get('/courses?sort=title')).status, 400);
 });
 
+test('강의 검색: %와 _와 역슬래시는 와일드카드가 아니라 글자 그대로 찾음', async () => {
+  const count = async (q) => (await (await get(`/courses?q=${encodeURIComponent(q)}`)).json()).length;
+  assert.equal(await count('%'), 0);
+  assert.equal(await count('_'), 0);
+  assert.equal(await count('\\'), 0);
+  // "웹 보안 입문"의 빈칸 자리에 _를 넣은 검색어. 와일드카드로 읽히면 1건이 나온다.
+  assert.equal(await count('웹_보안'), 0);
+  assert.equal(await count('웹 보안'), 1);
+});
+
 // 아래 5건은 결함 6(docs/v2-defects.md)을 잡는다. 번호는 docs/diagnosis/defect-6.md 3.4절의 그림과 같다.
 // 결함 상태에서는 응답에 다른 테이블의 값(비밀번호 해시, 전화번호)이 들어온다.
 // 실패할 때 그 값이 출력에 찍히지 않도록 응답 전체를 비교하지 않고 상태 코드와 건수만 비교한다.
