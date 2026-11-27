@@ -24,7 +24,7 @@ export class EnrollmentsService {
     return this.prisma.enrollment.findUnique({ where: { id }, select: VIEW });
   }
 
-  // 신청을 만든다. 락, 신청 수 조회, 삽입을 트랜잭션 하나로 처리한다.
+  // 신청을 생성한다. 락, 신청 수 조회, 삽입을 트랜잭션 하나로 처리한다.
   // 강의 행에 행 단위 락을 건다(FOR UPDATE). 락을 건 요청이 끝날 때까지 같은 강의의 다른 신청은 기다리므로,
   // 동시에 온 두 요청이 모두 삽입 전의 신청 수를 조회해 정원을 넘는 일이 없다. 다른 강의의 신청은 기다리지 않는다.
   // 이 방식을 고른 이유는 docs/decisions.md 11번에 있다.
@@ -46,7 +46,7 @@ export class EnrollmentsService {
     }
   }
 
-  // 이미 지워진 신청이어도 오류로 보지 않는다. 같은 취소가 두 번 와도 결과는 같다.
+  // 이미 삭제된 신청이어도 오류로 보지 않는다. 같은 취소가 두 번 와도 결과는 같다.
   async cancel(id: string): Promise<void> {
     await this.prisma.enrollment.deleteMany({ where: { id } });
   }

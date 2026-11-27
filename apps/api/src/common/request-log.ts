@@ -3,7 +3,7 @@ import type { NextFunction, Request, Response } from 'express';
 import type { AuthedRequest } from '../auth/current-user.js';
 
 // 요청 로그 한 줄에 들어가는 필드는 여기서만 정한다.
-// 헤더, 요청 본문, 응답 본문, 쿼리 문자열은 넣지 않는다. 토큰, 비밀번호, 검색어 같은 입력이 거기에 있다.
+// 헤더, request body, response body, 쿼리 문자열은 넣지 않는다. 토큰, 비밀번호, 검색어 같은 입력이 거기에 있다.
 type RequestLogLine = {
   time: string;
   id: string;

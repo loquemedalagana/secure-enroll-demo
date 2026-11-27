@@ -17,7 +17,7 @@ export class EnrollmentsController {
   }
 
   // 신청 생성. 학생만 할 수 있다(인가 Guard가 판단한다). 정원이 찼거나 이미 신청한 강의면 409다.
-  // 누구의 신청인지는 인증 Guard가 토큰으로 확인한 사용자로 정한다. 본문의 값으로 정하지 않는다.
+  // 누구의 신청인지는 인증 Guard가 토큰으로 확인한 사용자로 정한다. request body의 값으로 정하지 않는다.
   @Post()
   @Authorize('enrollment:create')
   @Header('Cache-Control', 'no-store')
