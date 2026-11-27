@@ -137,7 +137,7 @@ git checkout v2-defect-N                  # 결함 상태 재현
 - **검증 테스트**: 태그가 든 메모로 신청한 뒤, 명단 화면의 응답에 그 태그가 이스케이프된 문자열로 들어 있는지 확인합니다.
 - **브랜치**: `v2/09-web-enroll`
 
-### 결함 8. 요청 본문의 사용자 id를 신뢰 (파라미터 변조)
+### 결함 8. 요청 본문의 사용자 id를 신뢰 (IDOR)
 
 - **분류**: A01 Broken Access Control / CWE-639 (사용자가 제어하는 키를 통한 인가 우회)
 - **어떻게 생기는가**: 신청 생성(`POST /enrollments`)이 누구의 신청인지를 요청 본문의 `userId`에서 읽습니다.
@@ -157,7 +157,7 @@ git checkout v2-defect-N                  # 결함 상태 재현
 | 5 | 상태 변경을 GET으로 받음 | `v2/09-web-enroll` | 미정 | 미정 | 계획 |
 | 6 | SQL 인젝션 | `v2/07-enroll-create` | `v2-defect-6` | `v2-fix-6` | 수정함. [보고서](diagnosis/defect-6.md) |
 | 7 | 저장형 XSS | `v2/09-web-enroll` | 미정 | 미정 | 계획 |
-| 8 | 요청 본문의 사용자 id 신뢰 | `v2/07b-enroll-create` | `v2-defect-8` | 미정 | 확인함, 조치 전. [보고서](diagnosis/defect-8.md) |
+| 8 | IDOR (요청 본문의 사용자 id 신뢰) | `v2/07b-enroll-create` | `v2-defect-8` | 미정 | 확인함, 조치 전. [보고서](diagnosis/defect-8.md) |
 
 번호는 결함을 정한 순서이고 다루는 순서와 다를 수 있습니다.
 
