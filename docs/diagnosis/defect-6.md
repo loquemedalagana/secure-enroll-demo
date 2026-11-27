@@ -491,7 +491,7 @@ flowchart LR
 
 | 더한 것 | 내용 | 코드 |
 |---|---|---|
-| 검색어의 형식 검증 | `q`는 문자열 하나, 100자까지, 널 바이트 없음. 선언하지 않은 쿼리 필드가 오면 400입니다. 로그인의 본문과 같이 DTO와 전역 `ValidationPipe`로 검증합니다 | `courses/search-courses.dto.ts` |
+| 검색어의 형식 검증 | `q`는 문자열 하나, 100자까지, 널 바이트 없음. 선언하지 않은 쿼리 필드가 오면 400입니다. 로그인의 request body와 같이 DTO와 전역 `ValidationPipe`로 검증합니다 | `courses/search-courses.dto.ts` |
 | 와일드카드 처리 | 검색어의 역슬래시, `%`, `_` 앞에 역슬래시를 붙여 넘깁니다. `LIKE`가 이 글자들을 와일드카드가 아니라 글자 그대로 찾습니다 | `courses/courses.service.ts`의 `search` |
 
 | 검색어 | 수정 태그 (`v2-fix-6`) | 더한 뒤 |

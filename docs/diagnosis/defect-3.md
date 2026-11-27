@@ -11,7 +11,7 @@
 
 ## 1. 요약
 
-요청 로그를 넣으면서 인증이 제대로 되는지 보려고 넣은 출력 두 줄이 남아 있습니다. 로그인하면 본문의 비밀번호가, 토큰을 붙여 요청하면 `Authorization` 헤더의 토큰이 서버 로그에 그대로 찍힙니다. 요청을 보낸 사람이 받는 응답은 정상이고, 응답만 봐서는 알 수 없습니다.
+요청 로그를 넣으면서 인증이 제대로 되는지 보려고 넣은 출력 두 줄이 남아 있습니다. 로그인하면 request body의 비밀번호가, 토큰을 붙여 요청하면 `Authorization` 헤더의 토큰이 서버 로그에 그대로 찍힙니다. 요청을 보낸 사람이 받는 응답은 정상이고, 응답만 봐서는 알 수 없습니다.
 
 위험도를 중간으로 본 근거입니다. 두 곳에 공통인 것과 곳마다 다른 것을 나눠 적습니다.
 
@@ -94,12 +94,12 @@ node .github/scripts/defects/defect-3.mjs /tmp/api.log
 
 ```mermaid
 flowchart LR
-  req1(["POST /auth/login<br/>본문에 비밀번호"])
+  req1(["POST /auth/login<br/>body에 비밀번호"])
   req2(["GET /auth/me<br/>헤더에 토큰"])
 
   subgraph api["API"]
     g["인증 Guard<br/>헤더를 출력"]
-    h1["로그인 핸들러<br/>본문을 출력"]
+    h1["로그인 핸들러<br/>body를 출력"]
     h2["자기 정보 핸들러"]
     m["요청 로그<br/>메서드, 주소, 상태, 시간"]
   end
@@ -127,7 +127,7 @@ flowchart LR
 ### 3.1 원인 코드
 
 - 인증 Guard가 받은 `Authorization` 헤더를 출력합니다: [`auth/auth.guard.ts` 22행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-3/apps/api/src/auth/auth.guard.ts#L22). 토큰을 검증하기 전의 줄이라, 틀린 토큰이나 만료된 토큰도 찍힙니다.
-- 로그인 핸들러가 받은 본문을 출력합니다: [`auth/auth.controller.ts` 18행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-3/apps/api/src/auth/auth.controller.ts#L18). 비밀번호를 확인하기 전의 줄이라, 틀린 비밀번호도 찍힙니다.
+- 로그인 핸들러가 받은 request body를 출력합니다: [`auth/auth.controller.ts` 18행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-3/apps/api/src/auth/auth.controller.ts#L18). 비밀번호를 확인하기 전의 줄이라, 틀린 비밀번호도 찍힙니다.
 - 요청 로그 자체는 메서드, 주소, 상태 코드, 걸린 시간만 남깁니다: [`common/request-log.ts` 6~8행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-3/apps/api/src/common/request-log.ts#L6-L8).
 
 ### 3.2 로그에 값이 노출되는 곳
@@ -136,7 +136,7 @@ flowchart LR
 |---|---|---|---|
 | [`common/request-log.ts` 7행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-3/apps/api/src/common/request-log.ts#L7) | 모든 요청이 끝날 때 | 메서드, 주소, 상태 코드, 걸린 시간 | 없음 |
 | [`auth/auth.guard.ts` 22행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-3/apps/api/src/auth/auth.guard.ts#L22) | `@Public`이 아닌 모든 요청 | `Authorization` 헤더 전체 | **토큰** |
-| [`auth/auth.controller.ts` 18행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-3/apps/api/src/auth/auth.controller.ts#L18) | `POST /auth/login` | 요청 본문 전체 | **비밀번호** |
+| [`auth/auth.controller.ts` 18행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-3/apps/api/src/auth/auth.controller.ts#L18) | `POST /auth/login` | request body 전체 | **비밀번호** |
 
 `GET /courses`처럼 `@Public`이 붙은 경로는 인증 Guard가 헤더를 읽기 전에 통과시키므로 헤더가 찍히지 않습니다. 토큰이 찍히는 것은 로그인이 필요한 경로 5개 전부입니다.
 
@@ -152,7 +152,7 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  r1(["POST /auth/login<br/>본문에 비밀번호"])
+  r1(["POST /auth/login<br/>body에 비밀번호"])
   r2(["GET /auth/me<br/>헤더에 유효한 토큰"])
   r3(["GET /auth/me<br/>헤더에 틀린 토큰"])
 
@@ -221,7 +221,7 @@ flowchart LR
 고칠 방법은 세 가지입니다.
 
 - **방안 1 (두 줄 삭제)**: 인증 Guard와 로그인 핸들러의 출력 두 줄을 지웁니다.
-- **방안 2 (삭제 + 정해진 필드)**: 두 줄을 지우고, 요청 로그 한 줄에 들어가는 필드를 한 곳에서 정합니다. 헤더, 본문, 쿼리 문자열은 넣지 않습니다.
+- **방안 2 (삭제 + 정해진 필드)**: 두 줄을 지우고, 요청 로그 한 줄에 들어가는 필드를 한 곳에서 정합니다. 헤더, request body, 쿼리 문자열은 넣지 않습니다.
 - **방안 3 (방안 2 + 린트)**: 방안 2에 더해 린트 규칙(`no-console`)을 넣어 `console` 호출이 다시 들어오면 CI에서 걸리게 합니다.
 
 #### 실제로 바꿔 본 결과
