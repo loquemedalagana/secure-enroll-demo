@@ -249,7 +249,128 @@ flowchart LR
 
 ## 4. 조치
 
-작성 전.
+### 4.1 조치 방안 비교
+
+고칠 방법은 세 가지입니다.
+
+- **방안 1 (따옴표 이스케이프)**: 검색어의 작은따옴표를 두 개로 바꾼 뒤 지금처럼 쿼리 문자열에 이어 붙입니다.
+- **방안 2 (매개변수 쿼리)**: 쿼리에는 값이 들어갈 자리(`$1`)만 두고 검색어는 따로 넘깁니다. Prisma의 `$queryRaw` 태그 템플릿을 씁니다.
+- **방안 3 (쿼리 빌더)**: 원시 쿼리를 쓰지 않고 Prisma의 `findMany`와 `contains`로 바꿉니다.
+
+#### 실제로 바꿔 본 결과
+
+세 방안을 테스트를 더한 커밋의 코드에 각각 적용해 돌려 봤습니다. 이 변경들은 커밋하지 않았습니다. DB에 도착한 쿼리는 측정용 서버의 연결에만 `log_statement=all`을 켜서 PostgreSQL의 로그로 확인했습니다.
+
+방안 1:
+
+```diff
++    const escaped = q.replaceAll("'", "''");
+     return this.prisma.$queryRawUnsafe<CourseView[]>(
+-      `SELECT id, title FROM courses WHERE title ILIKE '%${q}%' ORDER BY id ASC`,
++      `SELECT id, title FROM courses WHERE title ILIKE '%${escaped}%' ORDER BY id ASC`,
+     );
+```
+
+방안 2:
+
+```diff
+-    return this.prisma.$queryRawUnsafe<CourseView[]>(
+-      `SELECT id, title FROM courses WHERE title ILIKE '%${q}%' ORDER BY id ASC`,
+-    );
++    return this.prisma.$queryRaw<CourseView[]>`
++      SELECT id, title FROM courses WHERE title ILIKE ${`%${q}%`} ORDER BY id ASC`;
+```
+
+방안 3:
+
+```diff
+-    return this.prisma.$queryRawUnsafe<CourseView[]>(
+-      `SELECT id, title FROM courses WHERE title ILIKE '%${q}%' ORDER BY id ASC`,
+-    );
++    return this.prisma.course.findMany({
++      where: { title: { contains: q, mode: 'insensitive' } },
++      select: { id: true, title: true },
++      orderBy: { id: 'asc' },
++    });
+```
+
+| 확인 | 결함 상태 | 방안 1 | 방안 2 | 방안 3 |
+|---|---|---|---|---|
+| API 테스트 99건 | 5건 실패 | 모두 통과 | 모두 통과 | 모두 통과 |
+| 재현 스크립트 판정 | 취약 | 차단 | 차단 | 차단 |
+| 검색어가 DB로 가는 방식 | 쿼리 문자열 안 | **쿼리 문자열 안** | 매개변수 `$1` | 매개변수 `$1` |
+| DB 설정 `standard_conforming_strings=off`에서 `\' UNION SELECT … FROM users --` | (재지 않음) | **사용자 테이블 5건** | 0건 | (재지 않음) |
+
+`UNION SELECT … FROM users`가 든 검색어를 보냈을 때 PostgreSQL 로그에 남은 줄입니다.
+
+```
+결함     statement: SELECT id, title FROM courses WHERE title ILIKE '%없는 제목' UNION SELECT username, "passwordHash" FROM users --%' ORDER BY id ASC
+방안 1   statement: SELECT id, title FROM courses WHERE title ILIKE '%없는 제목'' UNION SELECT username, "passwordHash" FROM users --%' ORDER BY id ASC
+방안 2   execute <unnamed>: SELECT id, title FROM courses WHERE title ILIKE $1 ORDER BY id ASC
+         Parameters: $1 = '%없는 제목'' UNION SELECT username, "passwordHash" FROM users --%'
+방안 3   execute <unnamed>: SELECT "public"."courses"."id", "public"."courses"."title" FROM "public"."courses" WHERE "public"."courses"."title" ILIKE ('%' || $1 || '%') ORDER BY "public"."courses"."id" ASC OFFSET $2
+         Parameters: $1 = '없는 제목'' UNION SELECT username, "passwordHash" FROM users --', $2 = '0'
+```
+
+이 표에서 볼 것은 세 가지입니다.
+
+- 방안 1도 이 저장소의 설정에서는 결함을 고칩니다. 테스트 99건을 통과하고 재현 스크립트의 판정이 차단입니다.
+- 방안 1에서는 검색어가 여전히 쿼리 문자열 안에 있습니다. 로그의 `statement:`는 쿼리를 문자열 하나로 보냈다는 뜻입니다. 방안 2와 3의 `execute`와 `Parameters:`는 쿼리와 값을 따로 보냈다는 뜻입니다. DB가 쿼리를 해석할 때 검색어는 그 안에 없습니다.
+- 방안 1이 안전한지는 DB가 문자열을 읽는 규칙에 달려 있습니다. 측정용 연결에서 `standard_conforming_strings`를 `off`로 바꾸면 역슬래시가 이스케이프 문자가 되어, `\'`의 따옴표가 문자열 안의 글자로 읽히고 코드가 덧붙인 따옴표가 문자열을 닫습니다. 같은 코드에서 사용자 테이블 5건이 다시 나왔습니다. 이 설정의 기본값은 `on`이고 이 저장소의 DB(PostgreSQL 18.7)도 `on`입니다. 방안 2는 같은 설정에서 0건입니다.
+
+세 방안에서 똑같이 남는 것도 쟀습니다. 인젝션이 아니라 입력 처리에 해당하는 것들입니다.
+
+| 검색어 | 결함 상태 | 방안 1 | 방안 2 | 방안 3 |
+|---|---|---|---|---|
+| `%` | 200, 2건 | 200, 2건 | 200, 2건 | 200, 2건 |
+| `_` | 200, 2건 | 200, 2건 | 200, 2건 | 200, 2건 |
+| 널 바이트 (`%00`) | 500 | 500 | 500 | 500 |
+| `q`를 두 번 (`?q=보안&q=실습`) | 200, 0건 | 200, 0건 | 200, 0건 | 200, 0건 |
+
+`%`와 `_`는 `LIKE`의 와일드카드라서 모든 강의가 나옵니다. 방안 3의 `contains`도 이 글자를 그대로 넘깁니다. 널 바이트는 PostgreSQL이 문자열로 받지 않아 오류가 납니다. `q`를 두 번 보내면 두 값이 쉼표로 이어진 문자열 하나(`보안,실습`)로 검색됩니다.
+
+#### 비교
+
+| 기준 | 방안 1 (따옴표 이스케이프) | 방안 2 (매개변수 쿼리) | 방안 3 (쿼리 빌더) |
+|---|---|---|---|
+| 바꾸는 양 | 2줄 | 3줄 | 5줄 |
+| 쿼리와 검색어 | 한 문자열로 섞여서 갑니다 | 따로 갑니다 | 따로 갑니다 |
+| 안전한 근거 | 따옴표를 빠짐없이 바꿨다는 것과 DB의 문자열 규칙 | DB가 쿼리를 해석할 때 검색어가 없습니다 | 방안 2와 같음 |
+| DB 설정이 바뀌면 | 다시 뚫릴 수 있습니다 (위에서 확인) | 영향 없음 (위에서 확인) | 재지 않음 |
+| SQL을 직접 쓰는가 | 씁니다 | 씁니다 | 쓰지 않습니다 |
+| 실행되는 쿼리 | 코드에 적힌 그대로 | 코드에 적힌 그대로 | Prisma가 만듭니다 (`OFFSET $2`가 붙음) |
+| 같은 실수가 다시 들어올 자리 | `$queryRawUnsafe`가 남습니다 | `$queryRawUnsafe`가 없어집니다. 원시 쿼리는 남습니다 | 원시 쿼리가 없어집니다 |
+
+**고른 것**: 정하기 전.
+
+**채택하지 않은 대안 (화면에서 입력을 막기)**: 검색 화면에서 따옴표를 입력하지 못하게 하는 방법입니다. API로 가는 길은 화면을 거치는 것 하나가 아닙니다.
+
+```mermaid
+flowchart LR
+  b(["브라우저의 화면<br/>입력 검사"])
+  d(["curl, Postman,<br/>스크립트"])
+  w["웹"]
+  a["API<br/>강의 검색"]
+  db[("PostgreSQL")]
+
+  b --> w --> a
+  d -- "화면을 거치지 않음" --> a
+  a --> db
+
+  classDef danger fill:#FCEBEB,stroke:#A32D2D,color:#501313
+  classDef safe fill:#E1F5EE,stroke:#0F6E56,color:#04342C
+  classDef neutral fill:#f6f8fa,stroke:#57606a,color:#24292f
+  class a danger
+  class b safe
+  class d,w,db neutral
+  linkStyle 2 stroke:#A32D2D,stroke-width:2px
+```
+
+화면의 검사는 화면을 쓰는 요청에만 적용됩니다. 2절의 재현 요청은 모두 화면 없이 API로 직접 보낸 것입니다. 지금은 웹에 검색 화면이 없어서 길이 아래쪽 하나뿐이고, 화면이 생겨도 아래쪽 길은 그대로 남습니다. 화면의 검사는 잘못 입력한 것을 일찍 알려 주는 용도로 둘 수 있지만 조치는 API에 있어야 합니다.
+
+**채택하지 않은 대안 (검색어에서 글자나 단어를 걸러 내기)**: `'`, `--`, `UNION` 같은 것이 들면 거부하는 방법입니다. 제목에 따옴표가 든 강의를 찾을 수 없게 되고, 걸러 낼 목록에 빠진 표현이 있으면 그대로 통과합니다. 쿼리와 값이 섞이는 원인은 그대로입니다.
+
+**이 PR에서 하지 않는 것 (DB 계정의 권한 줄이기)**: API가 DB에 접속하는 계정은 모든 테이블을 읽을 수 있습니다. 검색에 필요한 것은 `courses`뿐이지만 같은 계정으로 로그인과 신청 조회도 하므로, 권한을 줄이려면 계정을 나눠야 합니다. 인젝션을 막는 조치는 아니고, 뚫렸을 때 읽히는 범위를 줄이는 장치입니다.
 
 ## 5. 조치 뒤 재확인
 
