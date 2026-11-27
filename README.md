@@ -31,13 +31,13 @@
 |---|---|---|---|---|
 | `GET /health/live`, `GET /courses` | 200 | 200 | 200 | 200 |
 | `GET /auth/me`, `GET /enrollments` | 401 | 200 | 200 | 200 |
-| `GET /enrollments/:id` | 401 | 본인의 신청 200, 다른 사용자의 신청 403 | 자기 강의의 신청 200, 다른 강의의 신청 403 | 200 |
-| `GET /courses/:id/enrollments` | 401 | 403 | 자기 강의 200, 다른 강의 403 | 200 |
+| `GET /enrollments/:id` | 401 | 본인의 신청 200, 다른 사용자의 신청 403 | 담당 강의의 신청 200, 다른 강의의 신청 403 | 200 |
+| `GET /courses/:id/enrollments` | 401 | 403 | 담당 강의 200, 다른 강의 403 | 200 |
 | `GET /admin/enrollments` | 401 | 403 | 403 | 200 |
-| `POST /enrollments` | 401 | 201 (자기 이름으로만) | 403 | 403 |
+| `POST /enrollments` | 401 | 201 (본인의 이름으로만) | 403 | 403 |
 | `DELETE /enrollments/:id` | 401 | 본인의 신청 204, 다른 사용자의 신청 403 | 403 | 204 |
 
-`GET /enrollments`는 사람마다 범위가 다릅니다. 학생은 자기 신청, 강사는 자기 강의의 신청, 관리자는 전체를 받습니다. 판단은 `apps/api/src/authz/policy.ts`의 `can()` 한 곳에서 하고, 모든 요청이 전역 Guard를 지납니다.
+`GET /enrollments`는 사람마다 범위가 다릅니다. 학생은 본인의 신청, 강사는 담당 강의의 신청, 관리자는 전체를 받습니다. 판단은 `apps/api/src/authz/policy.ts`의 `can()` 한 곳에서 하고, 모든 요청이 전역 Guard를 지납니다.
 
 | 문서 | 내용 |
 |---|---|
