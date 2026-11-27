@@ -427,7 +427,7 @@ node .github/scripts/defects/defect-8.mjs --expect blocked
 
 첫 줄의 실행은 결함이 든 구현 커밋과 그 뒤의 문서 커밋들을 함께 올린 뒤의 것입니다. 둘째 줄은 테스트를 올린 뒤의 두 번째 실행이고, 작업 요약에 실패한 이유가 함께 나옵니다. 첫 번째 실행([45972981182](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45972981182))도 같은 3건이 실패했습니다. 셋째 줄은 수정 커밋과 문서 커밋을 함께 올린 뒤의 것입니다.
 
-실행의 로그는 GitHub의 보존 기간(기본 90일)이 지나면 지워집니다. 같은 실패와 통과는 `defects.yml`이 실행될 때마다 다시 생성됩니다.
+실행 로그는 GitHub의 보존 기간(기본 90일)이 지나면 삭제됩니다. `defects.yml`은 실행할 때마다 결함 태그와 수정 태그를 다시 테스트하므로, 위 표의 실패와 통과를 언제든 재현할 수 있습니다.
 
 ## 6. Burp Suite 진단 기록
 
