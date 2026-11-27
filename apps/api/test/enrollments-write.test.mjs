@@ -38,12 +38,9 @@ const call = (method, path, authorization, body) =>
     },
     body: body ? JSON.stringify(body) : undefined,
   });
-// 시드의 id 규칙: studentN의 id는 uN이다.
-const USER_ID = { student1: 'u1', student2: 'u2', student3: 'u3', student4: 'u4', student5: 'u5', student6: 'u6' };
 const PHONE = '010-0000-0003';
-// who의 토큰으로 who 자신의 신청을 만든다.
-const enroll = (who, courseId, extra = {}) =>
-  call('POST', '/enrollments', auth[who], { userId: USER_ID[who], courseId, phone: PHONE, ...extra });
+// who의 토큰으로 신청을 만든다. 본문에 신청자의 id는 없다. 신청자는 토큰의 사용자다.
+const enroll = (who, courseId, extra = {}) => call('POST', '/enrollments', auth[who], { courseId, phone: PHONE, ...extra });
 const countIn = async (courseId) =>
   Number((await db.query('select count(*) from enrollments where "courseId" = $1', [courseId])).rows[0].count);
 const exists = async (id) => (await db.query('select 1 from enrollments where id = $1', [id])).rowCount === 1;
@@ -105,7 +102,7 @@ test('신청 취소: 관리자는 다른 사람의 신청도 204', async () => {
 });
 
 test('신청 생성: 토큰 없이 401, 강사와 관리자는 403', async () => {
-  const body = { userId: 'u3', courseId: 'c4', phone: PHONE };
+  const body = { courseId: 'c4', phone: PHONE };
   assert.equal((await call('POST', '/enrollments', undefined, body)).status, 401);
   assert.equal((await call('POST', '/enrollments', auth.instructor1, body)).status, 403);
   assert.equal((await call('POST', '/enrollments', auth.admin1, body)).status, 403);
@@ -155,6 +152,14 @@ test('중복: 같은 학생이 같은 강의를 동시에 4번 신청하면 1건
     assert.equal(await countIn('c4'), 1, `${round + 1}번째`);
     await cleanup();
   }
+});
+
+test('신청 생성: 본문에 userId를 넣으면 자기 id여도 400', async () => {
+  // 본문은 신청자의 id를 받지 않는다. 선언하지 않은 필드라 거부된다.
+  const res = await enroll('student3', 'c4', { userId: 'u3' });
+  assert.equal(res.status, 400);
+  assert.equal((await res.json()).error, 'bad_request');
+  assert.equal(await countIn('c4'), 0);
 });
 
 // 아래 3건은 결함 8(docs/v2-defects.md)을 잡는다. 번호는 docs/diagnosis/defect-8.md 3.4절의 그림과 같다.
