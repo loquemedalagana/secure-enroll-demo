@@ -39,7 +39,7 @@ const call = (method, path, authorization, body) =>
     body: body ? JSON.stringify(body) : undefined,
   });
 const PHONE = '010-0000-0003';
-// who의 토큰으로 신청 요청을 보낸다. request body에 신청자의 id는 없다. 신청자는 토큰의 사용자다.
+// who의 토큰으로 신청한다. request body에 신청자의 id는 없다. 신청자는 토큰의 사용자다.
 const enroll = (who, courseId, extra = {}) => call('POST', '/enrollments', auth[who], { courseId, phone: PHONE, ...extra });
 const countIn = async (courseId) =>
   Number((await db.query('select count(*) from enrollments where "courseId" = $1', [courseId])).rows[0].count);

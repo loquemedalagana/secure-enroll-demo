@@ -10,7 +10,7 @@ const admin = await bearerFor('admin1');
 
 const countOf = async (authorization) => (await (await fetch(`${BASE}/enrollments`, { headers: { authorization } })).json()).length;
 
-// student1의 토큰으로, request body의 userId만 바꿔 신청 요청을 보낸다. c4는 시드에 신청이 없는 강의다.
+// student1의 토큰으로, request body의 userId만 바꿔 신청한다. c4는 시드에 신청이 없는 강의다.
 const created = [];
 async function createAs(userId) {
   const res = await fetch(`${BASE}/enrollments`, {
