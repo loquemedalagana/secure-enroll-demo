@@ -156,3 +156,36 @@ test('중복: 같은 학생이 같은 강의를 동시에 4번 신청하면 1건
     await cleanup();
   }
 });
+
+// 아래 3건은 결함 8(docs/v2-defects.md)을 잡는다. 번호는 docs/diagnosis/defect-8.md 3.4절의 그림과 같다.
+// 요청한 사람(토큰)과 본문의 userId가 다른 요청을 보낸다. 거부하는 방식(400인지 403인지)은 정하지 않고,
+// 다른 사람의 신청이 만들어지지 않았는지를 DB에서 확인한다.
+const ownedBy = async (userId) =>
+  Number((await db.query('select count(*) from enrollments where "userId" = $1 and id <> all($2)', [userId, SEEDED])).rows[0].count);
+const createWith = (who, userId) => call('POST', '/enrollments', auth[who], { userId, courseId: 'c4', phone: PHONE });
+
+test('신청 생성 1: 다른 학생의 id를 본문에 넣어도 그 학생의 신청이 만들어지지 않음', async () => {
+  await cleanup();
+  const res = await createWith('student3', 'u4');
+  assert.equal(await ownedBy('u4'), 0, 'student4(u4)의 이름으로 만들어진 신청의 건수');
+  assert.notEqual(res.status, 201, '상태 코드');
+  await cleanup();
+});
+
+test('신청 생성 2: 관리자의 id를 본문에 넣어도 관리자의 신청이 만들어지지 않음', async () => {
+  await cleanup();
+  const res = await createWith('student3', 'a1');
+  assert.equal(await ownedBy('a1'), 0, 'admin1(a1)의 이름으로 만들어진 신청의 건수');
+  assert.notEqual(res.status, 201, '상태 코드');
+  await cleanup();
+});
+
+test('신청 생성 3: 본문의 userId가 무엇이든 만들어진 신청의 소유자는 요청한 사람', async () => {
+  await cleanup();
+  // student3(u3)의 토큰 하나로, 본문의 userId만 바꿔 가며 보낸다.
+  for (const userId of ['u3', 'u4', 'u5', 'i1', 'a1']) await createWith('student3', userId);
+  const { rows } = await db.query('select "userId" from enrollments where id <> all($1)', [SEEDED]);
+  const notMine = rows.filter((r) => r.userId !== 'u3').length;
+  assert.equal(notMine, 0, '요청한 사람(u3)이 아닌 사용자의 이름으로 만들어진 신청의 건수');
+  await cleanup();
+});
