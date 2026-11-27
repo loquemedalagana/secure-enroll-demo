@@ -155,7 +155,7 @@ git checkout v2-defect-N                  # 결함 상태 재현
 | 3 | 요청 로그에 토큰과 비밀번호 | `v2/06-logging` | `v2-defect-3` | `v2-fix-3` | 수정함. [보고서](diagnosis/defect-3.md) |
 | 4 | 스크립트가 읽을 수 있는 토큰 | `v2/08-web-to-api` | 미정 | 미정 | 계획 |
 | 5 | 상태 변경을 GET으로 받음 | `v2/09-web-enroll` | 미정 | 미정 | 계획 |
-| 6 | SQL 인젝션 | `v2/07-enroll-create` | `v2-defect-6` | 미정 | 확인함, 조치 전. [보고서](diagnosis/defect-6.md) |
+| 6 | SQL 인젝션 | `v2/07-enroll-create` | `v2-defect-6` | `v2-fix-6` | 수정함. [보고서](diagnosis/defect-6.md) |
 | 7 | 저장형 XSS | `v2/09-web-enroll` | 미정 | 미정 | 계획 |
 | 8 | 요청 본문의 사용자 id 신뢰 | `v2/07-enroll-create` | 미정 | 미정 | 계획 |
 
