@@ -173,7 +173,7 @@ flowchart LR
 
 ### 3.4 결함을 잡는 테스트
 
-`apps/api/test/courses.test.mjs`에 테스트 5건을 더했습니다. 요청이 명단 핸들러에 도달하기 전에 Guard가 묻는 것은 네 가지이고, 테스트는 각각 다른 자리를 지킵니다.
+`apps/api/test/courses.test.mjs`에 테스트 5건을 추가했습니다. 요청이 명단 핸들러에 도달하기 전에 Guard가 묻는 것은 네 가지이고, 테스트는 각각 다른 자리를 지킵니다.
 
 ```mermaid
 flowchart LR

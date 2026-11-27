@@ -171,7 +171,7 @@ flowchart LR
 
 ### 3.4 결함을 잡는 테스트
 
-`apps/api/test/courses.test.mjs`에 "강의 검색 1~5"를 더했습니다. 테스트는 웹을 거치지 않고 띄워 놓은 API에 직접 요청하고, API는 실제 PostgreSQL에 연결되어 있습니다. DB를 흉내 내면 쿼리가 실제로 구문 분석되지 않아서 이 취약점이 드러나지 않습니다.
+`apps/api/test/courses.test.mjs`에 "강의 검색 1~5"를 추가했습니다. 테스트는 웹을 거치지 않고 띄워 놓은 API에 직접 요청하고, API는 실제 PostgreSQL에 연결되어 있습니다. DB를 흉내 내면 쿼리가 실제로 구문 분석되지 않아서 이 취약점이 드러나지 않습니다.
 
 ```mermaid
 flowchart LR
@@ -313,7 +313,7 @@ this.prisma.$queryRaw`… ILIKE ${`%${q}%`} …`       // 방안 2: 쿼리의 �
 
 #### 실제로 바꿔 본 결과
 
-세 방안을 테스트를 더한 커밋의 코드에 각각 적용해 돌려 봤습니다. 이 변경들은 커밋하지 않았습니다. DB에 도착한 쿼리는 측정용 서버의 연결에만 `log_statement=all`을 켜서 PostgreSQL의 로그로 확인했습니다.
+결함을 잡는 테스트를 추가한 뒤, 그 코드에 세 방안을 하나씩 적용해 테스트를 돌렸습니다. 이 변경들은 커밋하지 않았습니다. DB에 도착한 쿼리는 측정용 서버의 연결에만 `log_statement=all`을 켜서 PostgreSQL의 로그로 확인했습니다.
 
 방안 1:
 
@@ -510,7 +510,7 @@ execute <unnamed>: SELECT id, title FROM courses WHERE title ILIKE $1 ORDER BY i
 Parameters: $1 = '%\%%'
 ```
 
-테스트는 `apps/api/test/courses.test.mjs`에 5건을 더했습니다. 입력값 검증 4건과 와일드카드 1건입니다. API 테스트는 104건이 모두 통과합니다. 재현 스크립트의 판정은 그대로 차단이고, `standard_conforming_strings=off`에서 4.1절의 역슬래시 검색어를 다시 보낸 결과도 0건입니다.
+테스트는 `apps/api/test/courses.test.mjs`에 5건을 추가했습니다. 입력값 검증 4건과 와일드카드 1건입니다. API 테스트는 104건이 모두 통과합니다. 재현 스크립트의 판정은 그대로 차단이고, `standard_conforming_strings=off`에서 4.1절의 역슬래시 검색어를 다시 보낸 결과도 0건입니다.
 
 ## 5. 조치 뒤 재확인
 

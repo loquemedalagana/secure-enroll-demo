@@ -138,7 +138,7 @@ flowchart LR
 
 ### 3.4 결함을 잡는 테스트
 
-`apps/api/test/enrollments-write.test.mjs`에 "신청 생성 1~3"을 더했습니다. 요청한 사람(토큰)과 request body의 `userId`가 다른 요청을 보내고, 응답이 아니라 DB의 `enrollments` 테이블을 직접 조회해 확인합니다.
+`apps/api/test/enrollments-write.test.mjs`에 "신청 생성 1~3"을 추가했습니다. 요청한 사람(토큰)과 request body의 `userId`가 다른 요청을 보내고, 응답이 아니라 DB의 `enrollments` 테이블을 직접 조회해 확인합니다.
 
 ```mermaid
 flowchart LR
