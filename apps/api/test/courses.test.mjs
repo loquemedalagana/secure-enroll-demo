@@ -40,7 +40,7 @@ test('강의 검색: q가 비어 있으면 전체 목록', async () => {
   assert.equal((await (await get('/courses?q=')).json()).length, 4);
 });
 
-// 검색어의 형식 검증. 결함 6의 조치(매개변수 쿼리)와는 별개이고, 형식이 틀린 요청을 DB까지 보내지 않는다.
+// 검색어의 입력값 검증. 결함 6의 조치(매개변수 쿼리)와는 별개이고, 형식이 틀린 요청을 DB까지 보내지 않는다.
 test('강의 검색: q를 두 번 보내면 400', async () => {
   const res = await get(`/courses?q=${encodeURIComponent('보안')}&q=${encodeURIComponent('실습')}`);
   assert.equal(res.status, 400);

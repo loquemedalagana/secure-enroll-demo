@@ -491,7 +491,7 @@ flowchart LR
 
 | 추가한 것 | 내용 | 코드 |
 |---|---|---|
-| 검색어의 형식 검증 | `q`는 문자열 하나, 100자까지, 널 바이트 없음. 선언하지 않은 쿼리 필드가 오면 400입니다. 로그인의 request body와 같이 DTO와 전역 `ValidationPipe`로 검증합니다 | `courses/search-courses.dto.ts` |
+| 검색어의 입력값 검증 | `q`는 문자열 하나, 100자까지, 널 바이트 없음. 선언하지 않은 쿼리 필드가 오면 400입니다. 로그인의 request body와 같이 DTO와 전역 `ValidationPipe`로 검증합니다 | `courses/search-courses.dto.ts` |
 | 와일드카드 처리 | 검색어의 역슬래시, `%`, `_` 앞에 역슬래시를 붙여 넘깁니다. `LIKE`가 이 글자들을 와일드카드가 아니라 글자 그대로 찾습니다 | `courses/courses.service.ts`의 `search` |
 
 | 검색어 | 수정 태그 (`v2-fix-6`) | 추가한 뒤 |
@@ -510,7 +510,7 @@ execute <unnamed>: SELECT id, title FROM courses WHERE title ILIKE $1 ORDER BY i
 Parameters: $1 = '%\%%'
 ```
 
-테스트는 `apps/api/test/courses.test.mjs`에 5건을 더했습니다. 형식 검증 4건과 와일드카드 1건입니다. API 테스트는 104건이 모두 통과합니다. 재현 스크립트의 판정은 그대로 차단이고, `standard_conforming_strings=off`에서 4.1절의 역슬래시 검색어를 다시 보낸 결과도 0건입니다.
+테스트는 `apps/api/test/courses.test.mjs`에 5건을 더했습니다. 입력값 검증 4건과 와일드카드 1건입니다. API 테스트는 104건이 모두 통과합니다. 재현 스크립트의 판정은 그대로 차단이고, `standard_conforming_strings=off`에서 4.1절의 역슬래시 검색어를 다시 보낸 결과도 0건입니다.
 
 ## 5. 조치 뒤 재확인
 

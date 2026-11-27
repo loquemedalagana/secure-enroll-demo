@@ -33,7 +33,7 @@ export class ErrorResponseFilter implements ExceptionFilter {
         return;
       }
       const body: ErrorBody = { error: CODES[status] ?? 'request_error' };
-      // 입력 검증 실패만 어느 필드가 왜 틀렸는지 알려 준다. 검증 규칙이 만든 문구이고 입력값은 포함하지 않는다.
+      // 입력값 검증 실패만 어느 필드가 왜 틀렸는지 알려 준다. 검증 규칙이 만든 문구이고 입력값은 포함하지 않는다.
       const detail = exception.getResponse();
       if (status === 400 && typeof detail === 'object' && detail !== null) {
         const message = (detail as { message?: unknown }).message;

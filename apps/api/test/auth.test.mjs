@@ -1,4 +1,4 @@
-// 인증 테스트 (HTTP 수준, 실제 PostgreSQL): 로그인, 입력 검증, 전역 인증 Guard
+// 인증 테스트 (HTTP 수준, 실제 PostgreSQL): 로그인, 입력값 검증, 전역 인증 Guard
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import pg from 'pg';
