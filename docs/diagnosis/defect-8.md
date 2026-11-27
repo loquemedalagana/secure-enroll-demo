@@ -138,7 +138,63 @@ flowchart LR
 
 ### 3.4 결함을 잡는 테스트
 
-작성 전.
+`apps/api/test/enrollments-write.test.mjs`에 "신청 생성 1~3"을 더했습니다. 요청한 사람(토큰)과 본문의 `userId`가 다른 요청을 보내고, 응답이 아니라 DB의 `enrollments` 테이블을 직접 조회해 확인합니다.
+
+```mermaid
+flowchart LR
+  req(["테스트의 요청<br/>토큰: student3<br/>본문 userId:<br/>다른 사용자"])
+
+  subgraph api["API"]
+    g["인증·인가 Guard<br/>학생의 신청 생성<br/>허용"]
+    h["신청 생성 핸들러"]
+  end
+
+  db[("enrollments")]
+
+  req --> g --> h
+  h == "본문의 userId" ==> db
+
+  db -.- t1["테스트 1<br/>다른 학생의 신청이<br/>만들어지지 않는가"]
+  db -.- t2["테스트 2<br/>관리자의 신청이<br/>만들어지지 않는가"]
+  db -.- t3["테스트 3<br/>새 신청의 소유자가<br/>모두 요청한<br/>사람인가"]
+
+  classDef safe fill:#E1F5EE,stroke:#0F6E56,color:#04342C
+  classDef danger fill:#FCEBEB,stroke:#A32D2D,color:#501313
+  classDef neutral fill:#f6f8fa,stroke:#57606a,color:#24292f
+  classDef test fill:#E6F1FB,stroke:#185FA5,color:#0C2D50
+  class g safe
+  class h danger
+  class db neutral
+  class t1,t2,t3 test
+  style api fill:none,stroke:#57606a
+  linkStyle 2 stroke:#A32D2D,stroke-width:3px
+```
+
+빨강은 검증되지 않은 값을 쓰는 곳과 그 값이 저장되는 경로, 파랑은 테스트입니다.
+
+| 테스트 | 보내는 요청 | 개발 관점: 무엇을 확인하나 | 보안 관점: 무엇을 지키나 |
+|---|---|---|---|
+| 1 다른 학생의 id를 본문에 넣어도 그 학생의 신청이 만들어지지 않음 | `student3`의 토큰, 본문 `userId: u4` | `u4`의 신청이 DB에 0건인지 | 객체의 속성(소유자). 같은 역할의 다른 사용자 |
+| 2 관리자의 id를 본문에 넣어도 관리자의 신청이 만들어지지 않음 | `student3`의 토큰, 본문 `userId: a1` | `a1`의 신청이 DB에 0건인지 | 객체의 속성(소유자). 역할이 다른 사용자 |
+| 3 본문의 userId가 무엇이든 만들어진 신청의 소유자는 요청한 사람 | `student3`의 토큰, 본문의 `userId`를 `u3`, `u4`, `u5`, `i1`, `a1`로 바꿔 5번 | 새로 생긴 신청 중 소유자가 `u3`이 아닌 것이 0건인지 | 주체와 소유자의 일치. 어떤 값이 와도 지켜져야 하는 성질 |
+
+테스트는 거부하는 방식을 정하지 않습니다. 상태 코드는 201이 아닌지만 봅니다. 본문의 `userId`를 토큰과 비교해 403으로 거부할 수도 있고, 본문에서 `userId`를 없애 400으로 거부할 수도 있습니다. 어느 쪽으로 고칠지는 4.1절에서 방안을 적용해 보고 정합니다.
+
+이 커밋에서 API 테스트는 131건 중 128건 통과, 3건 실패입니다.
+
+```
+✖ 신청 생성 1: 다른 학생의 id를 본문에 넣어도 그 학생의 신청이 만들어지지 않음
+    student4(u4)의 이름으로 만들어진 신청의 건수
+    1 !== 0
+✖ 신청 생성 2: 관리자의 id를 본문에 넣어도 관리자의 신청이 만들어지지 않음
+    admin1(a1)의 이름으로 만들어진 신청의 건수
+    1 !== 0
+✖ 신청 생성 3: 본문의 userId가 무엇이든 만들어진 신청의 소유자는 요청한 사람
+    요청한 사람(u3)이 아닌 사용자의 이름으로 만들어진 신청의 건수
+    4 !== 0
+```
+
+테스트 3에서 5번 보낸 요청 중 4건이 다른 사용자의 신청으로 저장됐습니다. 테스트는 만든 신청을 끝날 때 지웁니다.
 
 ### 3.5 보안 관점: 접근통제 구성 요소로 본 결함
 
