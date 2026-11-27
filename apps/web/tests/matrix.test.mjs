@@ -78,7 +78,7 @@ test('student → 본인 신청 200', async () => {
 test('student → 타인 신청 403', async () => {
   assert.equal((await get('/api/enrollments/e2', await login('student1'))).status, 403);
 });
-test('instructor → 자기 강의 수강 신청 200', async () => {
+test('instructor → 담당 강의 수강 신청 200', async () => {
   assert.equal((await get('/api/enrollments/e1', await login('instructor1'))).status, 200);
 });
 test('instructor → 다른 강사 강의 수강 신청 403', async () => {

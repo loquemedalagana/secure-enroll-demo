@@ -8,7 +8,7 @@ import { type EnrollmentView, EnrollmentsService } from './enrollments.service.j
 export class EnrollmentsController {
   constructor(private readonly enrollments: EnrollmentsService) {}
 
-  // 내가 볼 수 있는 신청 목록. 학생은 자기 신청, 강사는 자기 강의의 신청, 관리자는 전체.
+  // 내가 볼 수 있는 신청 목록. 학생은 본인의 신청, 강사는 담당 강의의 신청, 관리자는 전체.
   @Get()
   @Authorize('enrollment:list')
   @Header('Cache-Control', 'no-store')

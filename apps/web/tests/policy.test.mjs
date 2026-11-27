@@ -19,7 +19,7 @@ const cases = [
   ['student → 타인 신청', student, 'enrollment:read', others, false],
   ['student → 리소스 없음', student, 'enrollment:read', undefined, false],
   ['student → 관리자', student, 'admin:read', undefined, false],
-  ['instructor → 자기 강의 신청', instructor, 'enrollment:read', mine, true],
+  ['instructor → 담당 강의 신청', instructor, 'enrollment:read', mine, true],
   ['instructor → 타 강사 강의 신청', instructor, 'enrollment:read', others, false],
   ['instructor → 리소스 없음', instructor, 'enrollment:read', undefined, false],
   ['instructor → 관리자', instructor, 'admin:read', undefined, false],

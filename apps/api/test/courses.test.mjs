@@ -127,7 +127,7 @@ test('강의 검색 5: 어떤 검색어든 응답의 모든 행은 제목에 그
   }
 });
 
-test('수강생 명단: 담당 강사는 자기 강의의 신청 전부', async () => {
+test('수강생 명단: 담당 강사는 그 강의의 신청 전부', async () => {
   const res = await get('/courses/c1/enrollments', auth.instructor1);
   assert.equal(res.status, 200);
   assert.equal(res.headers.get('cache-control'), 'no-store');
@@ -147,7 +147,7 @@ test('수강생 명단 1: 토큰 없이 401', async () => {
   assert.deepEqual(await res.json(), { error: 'unauthorized' });
 });
 
-test('수강생 명단 2: 학생은 자기가 신청한 강의여도 403', async () => {
+test('수강생 명단 2: 학생은 본인이 신청한 강의여도 403', async () => {
   const res = await get('/courses/c1/enrollments', auth.student1);
   assert.equal(res.status, 403);
   assert.deepEqual(await res.json(), { error: 'forbidden' });

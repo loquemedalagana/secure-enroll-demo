@@ -18,7 +18,7 @@ after(async () => {
 const get = (path, authorization) => fetch(`${server.base}${path}`, { headers: authorization ? { authorization } : {} });
 const ids = async (res) => (await res.json()).map((e) => e.id);
 
-test('내 신청 목록: 학생은 자기 신청만', async () => {
+test('내 신청 목록: 학생은 본인의 신청만', async () => {
   const res = await get('/enrollments', auth.student1);
   assert.equal(res.status, 200);
   assert.equal(res.headers.get('cache-control'), 'no-store');
@@ -26,7 +26,7 @@ test('내 신청 목록: 학생은 자기 신청만', async () => {
   assert.deepEqual(await ids(await get('/enrollments', auth.student2)), ['e2', 'e3']);
 });
 
-test('내 신청 목록: 강사는 자기 강의의 신청만, 관리자는 전체', async () => {
+test('내 신청 목록: 강사는 담당 강의의 신청만, 관리자는 전체', async () => {
   assert.deepEqual(await ids(await get('/enrollments', auth.instructor1)), ['e1', 'e2']);
   assert.deepEqual(await ids(await get('/enrollments', auth.instructor2)), ['e3']);
   assert.deepEqual(await ids(await get('/enrollments', auth.admin1)), ['e1', 'e2', 'e3']);
@@ -42,7 +42,7 @@ test('신청 한 건: 학생은 본인의 신청 200, 다른 사용자의 신청
   assert.deepEqual(await others.json(), { error: 'forbidden' });
 });
 
-test('신청 한 건: 강사는 자기 강의의 신청 200, 다른 강사 강의의 신청 403', async () => {
+test('신청 한 건: 강사는 담당 강의의 신청 200, 다른 강사 강의의 신청 403', async () => {
   assert.equal((await get('/enrollments/e1', auth.instructor1)).status, 200);
   assert.equal((await get('/enrollments/e3', auth.instructor1)).status, 403);
 });

@@ -68,7 +68,7 @@ test('신청 취소: 없는 id는 404', async () => {
   assert.deepEqual(await res.json(), { error: 'not_found' });
 });
 
-test('신청 생성: 학생이 신청하면 201이고 자기 목록에 보임', async () => {
+test('신청 생성: 학생이 신청하면 201이고 본인의 신청 목록에 나옴', async () => {
   const res = await enroll('student3', 'c4');
   assert.equal(res.status, 201);
   assert.equal(res.headers.get('cache-control'), 'no-store');
@@ -154,7 +154,7 @@ test('중복: 같은 학생이 같은 강의를 동시에 4번 신청하면 1건
   }
 });
 
-test('신청 생성: request body에 userId를 넣으면 자기 id여도 400', async () => {
+test('신청 생성: request body에 userId를 넣으면 본인의 id여도 400', async () => {
   // request body는 신청자의 id를 받지 않는다. 선언하지 않은 필드라 거부된다.
   const res = await enroll('student3', 'c4', { userId: 'u3' });
   assert.equal(res.status, 400);
