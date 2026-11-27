@@ -37,13 +37,13 @@ test('DB에 닿지 않으면 /health/ready 503, /health/live 200', async () => {
   }
 });
 
-test('없는 경로 → 404, 본문은 { error } 하나뿐', async () => {
+test('없는 경로 → 404, response body는 { error } 하나뿐', async () => {
   const res = await fetch(`${server.base}/no-such-path`);
   assert.equal(res.status, 404);
   assert.deepEqual(await res.json(), { error: 'not_found' });
 });
 
-test('깨진 JSON 본문 → 400, 스택·경로·예외 문구가 응답에 없음', async () => {
+test('깨진 JSON request body → 400, 스택·경로·예외 문구가 응답에 없음', async () => {
   const res = await fetch(`${server.base}/health/live`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
