@@ -302,7 +302,7 @@ node .github/scripts/defects/defect-1.mjs --expect blocked
 | 테스트를 추가한 뒤 | `fea395d` | 실패 (62건 중 3건) | [45597908796](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45597908796) |
 | 수정한 뒤 | `a691eca` | 통과 (62건) | [45758558647](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45758558647) |
 
-실행의 로그는 GitHub의 보존 기간(기본 90일)이 지나면 지워집니다. 같은 실패와 통과는 `defects.yml`이 실행될 때마다 다시 만들어집니다. 결함 태그의 코드에 수정 태그의 테스트를 돌려 위와 같은 테스트가 실패하는지, 수정 태그에서는 모두 통과하는지 확인하고 Summary에 실패한 테스트의 이름을 남깁니다.
+실행 로그는 GitHub의 보존 기간(기본 90일)이 지나면 삭제됩니다. 그 뒤에도 `defects.yml`을 실행하면 위 표의 실패와 통과를 재현할 수 있습니다. 결함 태그의 코드에 수정 태그의 테스트를 돌려 위와 같은 테스트가 실패하는지, 수정 태그에서는 모두 통과하는지 확인하고 Summary에 실패한 테스트의 이름을 남깁니다.
 
 ## 6. Burp Suite 진단 기록
 

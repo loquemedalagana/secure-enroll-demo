@@ -8,14 +8,22 @@ import { PrismaClient, type Role } from './generated/prisma/client.js';
 const users: { id: string; username: string; role: Role }[] = [
   { id: 'u1', username: 'student1', role: 'student' },
   { id: 'u2', username: 'student2', role: 'student' },
+  // u3~u6은 신청 생성·취소와 동시 신청 테스트가 쓴다. 시드에는 이들의 신청이 없다.
+  { id: 'u3', username: 'student3', role: 'student' },
+  { id: 'u4', username: 'student4', role: 'student' },
+  { id: 'u5', username: 'student5', role: 'student' },
+  { id: 'u6', username: 'student6', role: 'student' },
   { id: 'i1', username: 'instructor1', role: 'instructor' },
   { id: 'i2', username: 'instructor2', role: 'instructor' },
   { id: 'a1', username: 'admin1', role: 'admin' },
 ];
 
 const courses = [
-  { id: 'c1', title: '웹 보안 입문', instructorId: 'i1' },
-  { id: 'c2', title: '시큐어 코딩 실습', instructorId: 'i2' },
+  { id: 'c1', title: '웹 보안 입문', instructorId: 'i1', capacity: 30 },
+  { id: 'c2', title: '시큐어 코딩 실습', instructorId: 'i2', capacity: 30 },
+  // c3, c4에는 시드의 신청이 없다. c3은 정원이 1명이라 동시 신청 테스트에 쓴다.
+  { id: 'c3', title: '네트워크 기초', instructorId: 'i1', capacity: 1 },
+  { id: 'c4', title: '데이터베이스 기초', instructorId: 'i2', capacity: 30 },
 ];
 
 // phone은 더미 값(개인정보 예시용)

@@ -37,13 +37,13 @@ test('DB에 닿지 않으면 /health/ready 503, /health/live 200', async () => {
   }
 });
 
-test('없는 경로 → 404, 본문은 { error } 하나뿐', async () => {
+test('없는 경로 → 404, response body는 { error } 하나뿐', async () => {
   const res = await fetch(`${server.base}/no-such-path`);
   assert.equal(res.status, 404);
   assert.deepEqual(await res.json(), { error: 'not_found' });
 });
 
-test('깨진 JSON 본문 → 400, 스택·경로·예외 문구가 응답에 없음', async () => {
+test('깨진 JSON request body → 400, 스택·경로·예외 문구가 응답에 없음', async () => {
   const res = await fetch(`${server.base}/health/live`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -74,13 +74,13 @@ test('TOKEN_SECRET이 없거나 32자보다 짧으면 시작을 거부함', asyn
   }
 });
 
-test('시드: 사용자 5, 강의 2, 신청 3이고 비밀번호는 해시로만 저장됨', async () => {
+test('시드: 사용자 9, 강의 4, 신청 3이고 비밀번호는 해시로만 저장됨', async () => {
   const db = new pg.Client({ connectionString: DATABASE_URL });
   await db.connect();
   try {
     const count = async (table) => Number((await db.query(`select count(*) from ${table}`)).rows[0].count);
-    assert.equal(await count('users'), 5);
-    assert.equal(await count('courses'), 2);
+    assert.equal(await count('users'), 9);
+    assert.equal(await count('courses'), 4);
     assert.equal(await count('enrollments'), 3);
 
     const { rows } = await db.query('select username, "passwordHash" from users');

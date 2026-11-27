@@ -1,6 +1,7 @@
-import { Controller, Get, Header, NotFoundException, Param } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Header, HttpCode, NotFoundException, Param, Post } from '@nestjs/common';
 import { type AuthUser, CurrentUser } from '../auth/current-user.js';
 import { Authorize } from '../authz/authorize.decorator.js';
+import { CreateEnrollmentDto } from './create-enrollment.dto.js';
 import { type EnrollmentView, EnrollmentsService } from './enrollments.service.js';
 
 @Controller('enrollments')
@@ -15,6 +16,15 @@ export class EnrollmentsController {
     return this.enrollments.listFor(user);
   }
 
+  // 신청 생성. 학생만 할 수 있다(인가 Guard가 판단한다). 정원이 찼거나 이미 신청한 강의면 409다.
+  // 누구의 신청인지는 인증 Guard가 토큰으로 확인한 사용자로 정한다. request body의 값으로 정하지 않는다.
+  @Post()
+  @Authorize('enrollment:create')
+  @Header('Cache-Control', 'no-store')
+  create(@CurrentUser() user: AuthUser, @Body() body: CreateEnrollmentDto): Promise<EnrollmentView> {
+    return this.enrollments.create(user.id, body.courseId, body.phone);
+  }
+
   // 신청 한 건. 소유자, 그 강의의 담당 강사, 관리자만 볼 수 있다(인가 Guard가 판단한다).
   @Get(':id')
   @Authorize('enrollment:read', { resource: 'enrollment' })
@@ -23,5 +33,13 @@ export class EnrollmentsController {
     const enrollment = await this.enrollments.findById(id);
     if (!enrollment) throw new NotFoundException();
     return enrollment;
+  }
+
+  // 신청 취소. 소유자와 관리자만 할 수 있다(인가 Guard가 판단한다). 없는 id는 인가 Guard가 404로 끝낸다.
+  @Delete(':id')
+  @HttpCode(204)
+  @Authorize('enrollment:cancel', { resource: 'enrollment' })
+  async cancel(@Param('id') id: string): Promise<void> {
+    await this.enrollments.cancel(id);
   }
 }

@@ -14,7 +14,7 @@ function isSameOrigin(req: Request): boolean {
 }
 
 export async function POST(req: Request) {
-  // 로그인 CSRF 방어: 다른 사이트의 폼은 application/json 본문을 보낼 수 없다(보내려면 CORS 사전 요청이 필요).
+  // 로그인 CSRF 방어: 다른 사이트의 폼은 application/json request body를 보낼 수 없다(보내려면 CORS 사전 요청이 필요).
   const type = req.headers.get('content-type')?.split(';')[0].trim().toLowerCase();
   if (type !== 'application/json') return NextResponse.json({ error: 'unsupported media type' }, { status: 415 });
   if (!isSameOrigin(req)) return NextResponse.json({ error: 'forbidden' }, { status: 403 });

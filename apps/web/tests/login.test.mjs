@@ -35,7 +35,7 @@ before(async () => {
 
 after(() => server?.kill());
 
-test('text/plain 본문 로그인 → 415, 세션 쿠키 없음', async () => {
+test('text/plain request body 로그인 → 415, 세션 쿠키 없음', async () => {
   // 다른 사이트의 <form enctype="text/plain">이 만들 수 있는 요청
   const res = await login({ 'content-type': 'text/plain' });
   assert.equal(res.status, 415);

@@ -24,6 +24,8 @@ test('강의 목록: 토큰 없이 200, id와 제목만 돌려줌', async () => 
   assert.deepEqual(await res.json(), [
     { id: 'c1', title: '웹 보안 입문' },
     { id: 'c2', title: '시큐어 코딩 실습' },
+    { id: 'c3', title: '네트워크 기초' },
+    { id: 'c4', title: '데이터베이스 기초' },
   ]);
 });
 
@@ -35,7 +37,7 @@ test('강의 검색: 제목에 검색어가 들어 있는 강의만, 대소문�
 });
 
 test('강의 검색: q가 비어 있으면 전체 목록', async () => {
-  assert.equal((await (await get('/courses?q=')).json()).length, 2);
+  assert.equal((await (await get('/courses?q=')).json()).length, 4);
 });
 
 // 검색어의 형식 검증. 결함 6의 조치(매개변수 쿼리)와는 별개이고, 형식이 틀린 요청을 DB까지 보내지 않는다.
