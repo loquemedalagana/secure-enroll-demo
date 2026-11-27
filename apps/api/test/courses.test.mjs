@@ -38,6 +38,62 @@ test('강의 검색: q가 비어 있으면 전체 목록', async () => {
   assert.equal((await (await get('/courses?q=')).json()).length, 2);
 });
 
+// 아래 5건은 결함 6(docs/v2-defects.md)을 잡는다. 번호는 docs/diagnosis/defect-6.md 3.4절의 그림과 같다.
+// 결함 상태에서는 응답에 다른 테이블의 값(비밀번호 해시, 전화번호)이 들어온다.
+// 실패할 때 그 값이 출력에 찍히지 않도록 응답 전체를 비교하지 않고 상태 코드와 건수만 비교한다.
+const NO_MATCH = '없는 제목';
+const INJECTIONS = {
+  quote: "'",
+  always: `${NO_MATCH}' OR '%'='`,
+  users: `${NO_MATCH}' UNION SELECT username, "passwordHash" FROM users --`,
+  enrollments: `${NO_MATCH}' UNION SELECT id, phone FROM enrollments --`,
+};
+// 검색 결과를 값 없이 요약한다. 배열이 아니면 건수는 null이다.
+async function searchSummary(q) {
+  const res = await get(`/courses?q=${encodeURIComponent(q)}`);
+  let body = null;
+  try {
+    body = await res.json();
+  } catch {}
+  return { status: res.status, rows: Array.isArray(body) ? body : null };
+}
+const count = (rows) => (rows === null ? null : rows.length);
+
+test('강의 검색 1: 작은따옴표가 든 검색어도 오류 없이 200에 0건', async () => {
+  const { status, rows } = await searchSummary(INJECTIONS.quote);
+  assert.equal(status, 200, '상태 코드');
+  assert.equal(count(rows), 0, '건수');
+});
+
+test('강의 검색 2: 검색어로 조건을 항상 참으로 만들 수 없음', async () => {
+  const { status, rows } = await searchSummary(INJECTIONS.always);
+  assert.equal(status, 200, '상태 코드');
+  assert.equal(count(rows), 0, '제목에 없는 말인데 나온 강의의 건수');
+});
+
+test('강의 검색 3: 검색어로 사용자 테이블을 읽을 수 없음', async () => {
+  const { status, rows } = await searchSummary(INJECTIONS.users);
+  assert.equal(status, 200, '상태 코드');
+  assert.equal(count(rows), 0, '응답에 들어온 행의 건수');
+});
+
+test('강의 검색 4: 검색어로 신청 테이블을 읽을 수 없음', async () => {
+  const { status, rows } = await searchSummary(INJECTIONS.enrollments);
+  assert.equal(status, 200, '상태 코드');
+  assert.equal(count(rows), 0, '응답에 들어온 행의 건수');
+});
+
+test('강의 검색 5: 어떤 검색어든 응답의 모든 행은 제목에 그 검색어가 든 강의', async () => {
+  const courses = await (await get('/courses')).json();
+  for (const [name, q] of Object.entries({ normal: '보안', ...INJECTIONS })) {
+    const { rows } = await searchSummary(q);
+    const expected = courses.filter((c) => c.title.toLowerCase().includes(q.toLowerCase())).map((c) => c.id);
+    const outside = (rows ?? []).filter((r) => !expected.includes(r.id)).length;
+    assert.equal(outside, 0, `검색어 ${name}: 제목에 검색어가 없는데 응답에 든 행의 건수`);
+    assert.equal(count(rows), expected.length, `검색어 ${name}: 건수`);
+  }
+});
+
 test('수강생 명단: 담당 강사는 자기 강의의 신청 전부', async () => {
   const res = await get('/courses/c1/enrollments', auth.instructor1);
   assert.equal(res.status, 200);
