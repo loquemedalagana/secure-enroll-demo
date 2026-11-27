@@ -1,4 +1,4 @@
-import { Controller, Get, Header, Param } from '@nestjs/common';
+import { Controller, Get, Header, Param, Query } from '@nestjs/common';
 import { Public } from '../auth/public.decorator.js';
 import { Authorize } from '../authz/authorize.decorator.js';
 import type { EnrollmentView } from '../enrollments/enrollments.service.js';
@@ -8,11 +8,11 @@ import { type CourseView, CoursesService } from './courses.service.js';
 export class CoursesController {
   constructor(private readonly courses: CoursesService) {}
 
-  // 강의 목록. 로그인하지 않아도 볼 수 있다.
+  // 강의 목록. 로그인하지 않아도 볼 수 있다. q가 있으면 제목에 그 말이 들어 있는 강의만 돌려준다.
   @Public()
   @Get()
-  list(): Promise<CourseView[]> {
-    return this.courses.list();
+  list(@Query('q') q?: string): Promise<CourseView[]> {
+    return q ? this.courses.search(q) : this.courses.list();
   }
 
   // 강의 하나의 수강생 명단. 그 강의의 담당 강사와 관리자만 볼 수 있다(인가 Guard가 판단한다).

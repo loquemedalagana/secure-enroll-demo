@@ -13,6 +13,13 @@ export class CoursesService {
     return this.prisma.course.findMany({ select: { id: true, title: true }, orderBy: { id: 'asc' } });
   }
 
+  // 제목에 검색어가 들어 있는 강의. 대소문자는 구분하지 않는다.
+  search(q: string): Promise<CourseView[]> {
+    return this.prisma.$queryRawUnsafe<CourseView[]>(
+      `SELECT id, title FROM courses WHERE title ILIKE '%${q}%' ORDER BY id ASC`,
+    );
+  }
+
   // 강의 하나의 수강생 명단. 전화번호가 들어 있다.
   roster(courseId: string): Promise<EnrollmentView[]> {
     return this.prisma.enrollment.findMany({
