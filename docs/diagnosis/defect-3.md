@@ -205,7 +205,7 @@ flowchart LR
 
 | 구성 요소 | 이 결함에서 | 코드에서 확인하는 곳 |
 |---|---|---|
-| 주체의 자격 증명 | 비밀번호와 토큰. **인증에 쓰인 뒤 로그에 그대로 남습니다. 결함은 여기입니다** | [`auth/auth.guard.ts` 22행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-3/apps/api/src/auth/auth.guard.ts#L22), [`auth/auth.controller.ts` 18행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-3/apps/api/src/auth/auth.controller.ts#L18) |
+| 주체의 자격 증명 | 비밀번호와 토큰. **인증 Guard와 로그인 핸들러가 이 값을 서버 로그에 그대로 출력합니다. 결함은 여기입니다** | [`auth/auth.guard.ts` 22행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-3/apps/api/src/auth/auth.guard.ts#L22), [`auth/auth.controller.ts` 18행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-3/apps/api/src/auth/auth.controller.ts#L18) |
 | 시행 (PEP) | 정상. 토큰이 없거나 틀리면 401입니다 | [`auth/auth.guard.ts` 24~26행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-3/apps/api/src/auth/auth.guard.ts#L24-L26) |
 | 판단 (PE) | 정상. `can()`이 규칙대로 허용하고 거부합니다 | `authz/policy.ts` |
 | 로그 | 앱 바깥에서 읽히는 출력. 읽을 수 있는 사람의 범위가 앱의 접근통제와 따로 정해집니다 | 프로세스의 표준 출력 |

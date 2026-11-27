@@ -241,7 +241,7 @@ flowchart LR
 | 구성 요소 | 이 결함에서 | 코드에서 확인하는 곳 |
 |---|---|---|
 | 주체 | 로그인하지 않은 요청 | |
-| 객체 | 열어 준 것은 강의의 id와 제목입니다. **쿼리가 바뀌어 사용자와 신청까지 객체가 됩니다. 취약점은 여기서 생깁니다** | [`courses/courses.service.ts` 17~21행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-6/apps/api/src/courses/courses.service.ts#L17-L21) |
+| 객체 | 열어 준 것은 강의의 id와 제목입니다. **서비스가 검색어를 SQL에 문자열로 연결해서, 검색어에 따라 쿼리가 바뀌고 사용자와 신청까지 객체가 됩니다. 결함은 여기입니다** | [`courses/courses.service.ts` 17~21행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-6/apps/api/src/courses/courses.service.ts#L17-L21) |
 | 시행 (PEP) | 정상. `@Public`이 붙은 핸들러라 통과시킵니다 | `auth/auth.guard.ts`, `authz/authz.guard.ts` |
 | 판단 (PE) | 호출되지 않습니다. 공개 경로라 판단할 것이 없습니다 | `authz/policy.ts` |
 
