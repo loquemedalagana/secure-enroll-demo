@@ -226,6 +226,26 @@ IDOR은 파라미터 변조로 드러나는 취약점 중에서 바꾼 값이 �
 
 신청 취소(`DELETE /enrollments/:id`)에서 경로의 id를 다른 학생의 신청 id로 바꾸는 요청도 파라미터 변조입니다. 이 경우는 인가 Guard가 DB에 저장된 소유자를 읽어 PE에 넘기므로 403으로 끝납니다. `apps/api/test/enrollments-write.test.mjs`의 "신청 취소: 다른 학생의 신청은 403이고 삭제되지 않음" 테스트가 이것을 확인합니다.
 
+```mermaid
+flowchart TD
+  t(["요청의 값을 바꿔 보냄<br/>파라미터 변조"]) --> q1{"바꾼 값이<br/>식별자인가"}
+  q1 -- 아니요 --> q2{"서버가 그 값을<br/>그대로 쓰는가"}
+  q2 -- 예 --> v1["CWE-472<br/>예: 결제 요청의 가격"]
+  q2 -- 아니요 --> b1["차단<br/>서버가 가진 값으로 다시 정함"]
+  q1 -- 예 --> q3{"서버가 그 식별자로<br/>권한을 확인하는가"}
+  q3 -- 아니요 --> v2["IDOR, CWE-639<br/>결함 8: request body의 userId"]
+  q3 -- 예 --> b2["차단<br/>신청 취소의 경로 id: 403"]
+
+  classDef safe fill:#E1F5EE,stroke:#0F6E56,color:#04342C
+  classDef danger fill:#FCEBEB,stroke:#A32D2D,color:#501313
+  classDef check fill:#FAEEDA,stroke:#854F0B,color:#412402
+  class v1,v2 danger
+  class b1,b2 safe
+  class q1,q2,q3 check
+```
+
+빨강은 결함이 되는 경우, 초록은 막히는 경우, 노랑은 서버가 확인하는 지점입니다.
+
 ## 4. 조치
 
 ### 4.1 조치 방안 비교
