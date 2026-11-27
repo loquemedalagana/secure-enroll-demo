@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import type { AuthUser } from '../auth/current-user.js';
 import { enrollmentScope } from '../authz/policy.js';
+import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 // 응답으로 내보내는 신청의 모양. phone은 개인정보 예시 컬럼(더미 값)이다.
@@ -21,6 +22,27 @@ export class EnrollmentsService {
 
   findById(id: string): Promise<EnrollmentView | null> {
     return this.prisma.enrollment.findUnique({ where: { id }, select: VIEW });
+  }
+
+  // 신청을 만든다. 정원 검사와 삽입을 한 트랜잭션으로 묶는다.
+  // 강의 행을 먼저 잠근다(FOR UPDATE). 같은 강의의 신청은 한 번에 하나씩 수를 세고 넣으므로,
+  // 동시에 온 요청이 둘 다 "자리가 있다"고 보고 정원을 넘기는 일이 없다. 다른 강의의 신청은 기다리지 않는다.
+  async create(userId: string, courseId: string, phone: string): Promise<EnrollmentView> {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const courses = await tx.$queryRaw<{ capacity: number }[]>`
+          SELECT capacity FROM courses WHERE id = ${courseId} FOR UPDATE`;
+        const course = courses[0];
+        if (!course) throw new NotFoundException();
+        const taken = await tx.enrollment.count({ where: { courseId } });
+        if (taken >= course.capacity) throw new ConflictException();
+        return tx.enrollment.create({ data: { userId, courseId, phone }, select: VIEW });
+      });
+    } catch (error) {
+      // (사용자, 강의) 유일 제약에 걸린 경우다. 같은 학생이 같은 강의를 다시 신청했다.
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') throw new ConflictException();
+      throw error;
+    }
   }
 
   // 이미 지워진 신청이어도 오류로 보지 않는다. 같은 취소가 두 번 와도 결과는 같다.

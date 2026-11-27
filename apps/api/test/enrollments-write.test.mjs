@@ -19,7 +19,7 @@ before(async () => {
   await db.connect();
   await cleanup();
   server = await startServer(4196);
-  for (const name of ['student1', 'student2', 'instructor1', 'admin1']) {
+  for (const name of ['student1', 'student2', 'student3', 'student4', 'student5', 'student6', 'instructor1', 'admin1']) {
     auth[name] = await bearerFor(server.base, name);
   }
 });
@@ -38,6 +38,14 @@ const call = (method, path, authorization, body) =>
     },
     body: body ? JSON.stringify(body) : undefined,
   });
+// 시드의 id 규칙: studentN의 id는 uN이다.
+const USER_ID = { student1: 'u1', student2: 'u2', student3: 'u3', student4: 'u4', student5: 'u5', student6: 'u6' };
+const PHONE = '010-0000-0003';
+// who의 토큰으로 who 자신의 신청을 만든다.
+const enroll = (who, courseId, extra = {}) =>
+  call('POST', '/enrollments', auth[who], { userId: USER_ID[who], courseId, phone: PHONE, ...extra });
+const countIn = async (courseId) =>
+  Number((await db.query('select count(*) from enrollments where "courseId" = $1', [courseId])).rows[0].count);
 const exists = async (id) => (await db.query('select 1 from enrollments where id = $1', [id])).rowCount === 1;
 
 test('신청 취소: 토큰 없이 401', async () => {
@@ -61,4 +69,90 @@ test('신청 취소: 없는 id는 404', async () => {
   const res = await call('DELETE', '/enrollments/no-such-id', auth.admin1);
   assert.equal(res.status, 404);
   assert.deepEqual(await res.json(), { error: 'not_found' });
+});
+
+test('신청 생성: 학생이 신청하면 201이고 자기 목록에 보임', async () => {
+  const res = await enroll('student3', 'c4');
+  assert.equal(res.status, 201);
+  assert.equal(res.headers.get('cache-control'), 'no-store');
+  const created = await res.json();
+  assert.deepEqual(Object.keys(created).sort(), ['courseId', 'id', 'phone', 'userId']);
+  assert.equal(created.userId, 'u3');
+  assert.equal(created.courseId, 'c4');
+
+  const mine = await (await call('GET', '/enrollments', auth.student3)).json();
+  assert.deepEqual(mine.map((e) => e.id), [created.id]);
+});
+
+test('신청 생성: 같은 강의를 다시 신청하면 409', async () => {
+  const res = await enroll('student3', 'c4');
+  assert.equal(res.status, 409);
+  assert.deepEqual(await res.json(), { error: 'conflict' });
+  assert.equal(await countIn('c4'), 1);
+});
+
+test('신청 취소: 본인은 204이고 지워짐, 같은 취소를 다시 보내면 404', async () => {
+  const [mine] = await (await call('GET', '/enrollments', auth.student3)).json();
+  assert.equal((await call('DELETE', `/enrollments/${mine.id}`, auth.student3)).status, 204);
+  assert.equal(await exists(mine.id), false);
+  assert.equal((await call('DELETE', `/enrollments/${mine.id}`, auth.student3)).status, 404);
+});
+
+test('신청 취소: 관리자는 다른 사람의 신청도 204', async () => {
+  const created = await (await enroll('student3', 'c4')).json();
+  assert.equal((await call('DELETE', `/enrollments/${created.id}`, auth.admin1)).status, 204);
+  assert.equal(await exists(created.id), false);
+});
+
+test('신청 생성: 토큰 없이 401, 강사와 관리자는 403', async () => {
+  const body = { userId: 'u3', courseId: 'c4', phone: PHONE };
+  assert.equal((await call('POST', '/enrollments', undefined, body)).status, 401);
+  assert.equal((await call('POST', '/enrollments', auth.instructor1, body)).status, 403);
+  assert.equal((await call('POST', '/enrollments', auth.admin1, body)).status, 403);
+  assert.equal(await countIn('c4'), 0);
+});
+
+test('신청 생성: 없는 강의는 404', async () => {
+  const res = await enroll('student3', 'no-such-course');
+  assert.equal(res.status, 404);
+  assert.deepEqual(await res.json(), { error: 'not_found' });
+});
+
+test('신청 생성: 형식이 틀린 본문은 400', async () => {
+  assert.equal((await enroll('student3', 'c4', { phone: '01000000003' })).status, 400);
+  assert.equal((await enroll('student3', 'c4', { courseId: 4 })).status, 400);
+  assert.equal((await enroll('student3', 'c4', { memo: '선언하지 않은 필드' })).status, 400);
+  assert.equal((await call('POST', '/enrollments', auth.student3, {})).status, 400);
+  assert.equal(await countIn('c4'), 0);
+});
+
+test('정원: 찬 강의에 신청하면 409', async () => {
+  // c3의 정원은 1명이다.
+  assert.equal((await enroll('student3', 'c3')).status, 201);
+  const res = await enroll('student4', 'c3');
+  assert.equal(res.status, 409);
+  assert.deepEqual(await res.json(), { error: 'conflict' });
+  assert.equal(await countIn('c3'), 1);
+  await cleanup();
+});
+
+test('정원: 정원이 1명인 강의에 학생 4명이 동시에 신청하면 1명만 201', async () => {
+  // 한 번으로는 우연히 통과할 수 있어서 여러 번 되풀이한다.
+  for (let round = 0; round < 10; round++) {
+    const results = await Promise.all(['student3', 'student4', 'student5', 'student6'].map((who) => enroll(who, 'c3')));
+    const statuses = results.map((r) => r.status).sort();
+    assert.deepEqual(statuses, [201, 409, 409, 409], `${round + 1}번째`);
+    assert.equal(await countIn('c3'), 1, `${round + 1}번째`);
+    await cleanup();
+  }
+});
+
+test('중복: 같은 학생이 같은 강의를 동시에 4번 신청하면 1건만 201', async () => {
+  for (let round = 0; round < 10; round++) {
+    const results = await Promise.all([1, 2, 3, 4].map(() => enroll('student3', 'c4')));
+    const statuses = results.map((r) => r.status).sort();
+    assert.deepEqual(statuses, [201, 409, 409, 409], `${round + 1}번째`);
+    assert.equal(await countIn('c4'), 1, `${round + 1}번째`);
+    await cleanup();
+  }
 });
