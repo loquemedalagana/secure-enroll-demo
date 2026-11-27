@@ -24,9 +24,10 @@ export class EnrollmentsService {
     return this.prisma.enrollment.findUnique({ where: { id }, select: VIEW });
   }
 
-  // 신청을 만든다. 정원 검사와 삽입을 한 트랜잭션으로 묶는다.
-  // 강의 행을 먼저 잠근다(FOR UPDATE). 같은 강의의 신청은 한 번에 하나씩 수를 세고 넣으므로,
-  // 동시에 온 요청이 둘 다 "자리가 있다"고 보고 정원을 넘기는 일이 없다. 다른 강의의 신청은 기다리지 않는다.
+  // 신청을 만든다. 락, 신청 수 조회, 삽입을 트랜잭션 하나로 처리한다.
+  // 강의 행에 행 단위 락을 건다(FOR UPDATE). 락을 건 요청이 끝날 때까지 같은 강의의 다른 신청은 기다리므로,
+  // 동시에 온 두 요청이 모두 삽입 전의 신청 수를 조회해 정원을 넘는 일이 없다. 다른 강의의 신청은 기다리지 않는다.
+  // 이 방식을 고른 이유는 docs/decisions.md 11번에 있다.
   async create(userId: string, courseId: string, phone: string): Promise<EnrollmentView> {
     try {
       return await this.prisma.$transaction(async (tx) => {
