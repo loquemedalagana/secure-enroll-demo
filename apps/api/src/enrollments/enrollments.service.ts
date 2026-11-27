@@ -23,6 +23,11 @@ export class EnrollmentsService {
     return this.prisma.enrollment.findUnique({ where: { id }, select: VIEW });
   }
 
+  // 이미 지워진 신청이어도 오류로 보지 않는다. 같은 취소가 두 번 와도 결과는 같다.
+  async cancel(id: string): Promise<void> {
+    await this.prisma.enrollment.deleteMany({ where: { id } });
+  }
+
   listAll(): Promise<EnrollmentView[]> {
     return this.prisma.enrollment.findMany({ select: VIEW, orderBy: { id: 'asc' } });
   }

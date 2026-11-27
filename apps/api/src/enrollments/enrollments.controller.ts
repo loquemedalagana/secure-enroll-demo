@@ -1,4 +1,4 @@
-import { Controller, Get, Header, NotFoundException, Param } from '@nestjs/common';
+import { Controller, Delete, Get, Header, HttpCode, NotFoundException, Param } from '@nestjs/common';
 import { type AuthUser, CurrentUser } from '../auth/current-user.js';
 import { Authorize } from '../authz/authorize.decorator.js';
 import { type EnrollmentView, EnrollmentsService } from './enrollments.service.js';
@@ -23,5 +23,13 @@ export class EnrollmentsController {
     const enrollment = await this.enrollments.findById(id);
     if (!enrollment) throw new NotFoundException();
     return enrollment;
+  }
+
+  // 신청 취소. 소유자와 관리자만 할 수 있다(인가 Guard가 판단한다). 없는 id는 인가 Guard가 404로 끝낸다.
+  @Delete(':id')
+  @HttpCode(204)
+  @Authorize('enrollment:cancel', { resource: 'enrollment' })
+  async cancel(@Param('id') id: string): Promise<void> {
+    await this.enrollments.cancel(id);
   }
 }
