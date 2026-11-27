@@ -5,7 +5,7 @@ import type { AuthUser } from '../auth/current-user.js';
 //
 // 규칙은 두 종류다.
 // - 역할 규칙: 사용자의 역할만 본다. (관리자 목록은 admin만)
-// - 속성 규칙: 사용자와 대상의 속성을 비교한다. (학생은 신청의 소유자일 때, 강사는 그 강의의 담당 강사일 때)
+// - 속성 규칙: 사용자와 대상의 속성을 비교한다. (학생은 자기 신청일 때, 강사는 자기가 담당하는 강의일 때)
 export type Action =
   | 'enrollment:read' // 신청 한 건 조회
   | 'enrollment:list' // 자기가 볼 수 있는 신청 목록
@@ -15,8 +15,8 @@ export type Action =
   | 'admin:read' // 전체 신청 목록
   | 'self:read'; // 자기 id와 역할
 
-// 신청의 소유자(ownerId)와 그 강의의 담당 강사(instructorId). 호출하는 쪽이 DB에서 읽어 채운다.
-// 대상이 강의이면 소유자가 없으므로 instructorId만 채운다.
+// 신청자(ownerId)와 그 강의의 담당 강사(instructorId). 호출하는 쪽이 DB에서 읽어 채운다.
+// 대상이 강의이면 신청자가 없으므로 instructorId만 채운다.
 export type Resource = { ownerId?: string; instructorId: string };
 
 const ROLES: readonly string[] = ['student', 'instructor', 'admin'];
@@ -41,7 +41,7 @@ export function can(user: AuthUser | null, action: Action, resource?: Resource):
       // 신청은 학생이 자기 이름으로만 만든다. 강사와 관리자의 대리 신청은 없다.
       return user.role === 'student';
     case 'enrollment:cancel':
-      // 취소는 그 신청의 소유자와 관리자만 한다. 담당 강사는 조회만 할 수 있다.
+      // 취소는 신청자와 관리자만 한다. 담당 강사는 조회만 할 수 있다.
       if (user.role === 'admin') return true;
       if (!resource) return false;
       return user.role === 'student' && resource.ownerId === user.id;

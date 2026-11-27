@@ -3,7 +3,7 @@ import type { Action } from './policy.js';
 
 export const AUTHORIZE = 'authz:rule';
 
-// resource가 'enrollment'이면 인가 Guard가 경로의 :id로 신청을 찾아 소유자와 담당 강사를 정책에 넘긴다.
+// resource가 'enrollment'이면 인가 Guard가 경로의 :id로 신청을 찾아 신청자와 담당 강사를 정책에 넘긴다.
 // 'course'이면 :id로 강의를 찾아 담당 강사를 넘긴다.
 export type ResourceKind = 'enrollment' | 'course';
 export type AuthorizeRule = { action: Action; resource?: ResourceKind };

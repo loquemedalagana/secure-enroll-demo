@@ -185,7 +185,7 @@ test('신청 생성 2: 관리자의 id를 request body에 넣어도 관리자의
   await cleanup();
 });
 
-test('신청 생성 3: request body의 userId가 무엇이든 신청의 소유자는 요청한 사람', async () => {
+test('신청 생성 3: request body의 userId가 무엇이든 신청자는 요청한 사람', async () => {
   await cleanup();
   // student3(u3)의 토큰 하나로, request body의 userId만 바꿔 가며 보낸다.
   for (const userId of ['u3', 'u4', 'u5', 'i1', 'a1']) await createWith('student3', userId);

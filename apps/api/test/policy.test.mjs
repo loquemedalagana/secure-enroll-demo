@@ -28,7 +28,7 @@ const cases = [
   ['admin → 관리자', admin, 'admin:read', undefined, true],
   ['알 수 없는 역할', { id: 'x', role: 'guest' }, 'enrollment:read', mine, false],
   ['알 수 없는 행위', admin, 'enrollment:delete', mine, false],
-  ['id가 소유자·강사와 다른 student가 강사 id만 일치', { id: 'i1', role: 'student' }, 'enrollment:read', mine, false],
+  ['id가 신청자·강사와 다른 student가 강사 id만 일치', { id: 'i1', role: 'student' }, 'enrollment:read', mine, false],
   // API에 새로 생긴 행위
   ['비로그인 → 신청 목록', null, 'enrollment:list', undefined, false],
   ['student → 신청 목록(범위는 enrollmentScope가 정함)', student, 'enrollment:list', undefined, true],
@@ -47,7 +47,7 @@ const cases = [
   ['student → 신청 생성', student, 'enrollment:create', undefined, true],
   ['instructor → 신청 생성', instructor, 'enrollment:create', undefined, false],
   ['admin → 신청 생성(대리 신청 없음)', admin, 'enrollment:create', undefined, false],
-  // 신청 취소. 소유자와 관리자만.
+  // 신청 취소. 신청자와 관리자만.
   ['비로그인 → 신청 취소', null, 'enrollment:cancel', mine, false],
   ['student → 본인 신청 취소', student, 'enrollment:cancel', mine, true],
   ['student → 타인 신청 취소', student, 'enrollment:cancel', others, false],

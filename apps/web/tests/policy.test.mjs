@@ -28,7 +28,7 @@ const cases = [
   ['admin → 관리자', admin, 'admin:read', undefined, true],
   ['알 수 없는 역할', { uid: 'x', role: 'guest' }, 'enrollment:read', mine, false],
   ['알 수 없는 행위', admin, 'enrollment:delete', mine, false],
-  ['uid가 소유자·강사와 다른 student가 강사 id만 일치', { uid: 'i1', role: 'student' }, 'enrollment:read', mine, false],
+  ['uid가 신청자·강사와 다른 student가 강사 id만 일치', { uid: 'i1', role: 'student' }, 'enrollment:read', mine, false],
 ];
 
 for (const [name, user, action, resource, expected] of cases) {

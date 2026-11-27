@@ -25,7 +25,7 @@ export class EnrollmentsController {
     return this.enrollments.create(user.id, body.courseId, body.phone);
   }
 
-  // 신청 한 건. 소유자, 그 강의의 담당 강사, 관리자만 볼 수 있다(인가 Guard가 판단한다).
+  // 신청 한 건. 신청자, 그 강의의 담당 강사, 관리자만 볼 수 있다(인가 Guard가 판단한다).
   @Get(':id')
   @Authorize('enrollment:read', { resource: 'enrollment' })
   @Header('Cache-Control', 'no-store')
@@ -35,7 +35,7 @@ export class EnrollmentsController {
     return enrollment;
   }
 
-  // 신청 취소. 소유자와 관리자만 할 수 있다(인가 Guard가 판단한다). 없는 id는 인가 Guard가 404로 끝낸다.
+  // 신청 취소. 신청자와 관리자만 할 수 있다(인가 Guard가 판단한다). 없는 id는 인가 Guard가 404로 끝낸다.
   @Delete(':id')
   @HttpCode(204)
   @Authorize('enrollment:cancel', { resource: 'enrollment' })
