@@ -1,5 +1,5 @@
 // 신청 생성·취소 테스트 (HTTP 수준, 실제 PostgreSQL)
-// 이 파일은 DB의 내용을 바꾼다. 시드의 신청(e1~e3)은 삭제하지 않고, 생성한 신청은 끝날 때 삭제한다.
+// 이 파일은 DB의 내용을 바꾼다. 시드의 신청(e1~e3)은 삭제하지 않고, 새로 생긴 신청은 끝날 때 삭제한다.
 // 테스트 파일은 하나씩 차례로 돈다(package.json의 --test-concurrency=1). 다른 파일이 목록 전체를 비교하기 때문이다.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -39,7 +39,7 @@ const call = (method, path, authorization, body) =>
     body: body ? JSON.stringify(body) : undefined,
   });
 const PHONE = '010-0000-0003';
-// who의 토큰으로 신청을 생성한다. request body에 신청자의 id는 없다. 신청자는 토큰의 사용자다.
+// who의 토큰으로 신청 요청을 보낸다. request body에 신청자의 id는 없다. 신청자는 토큰의 사용자다.
 const enroll = (who, courseId, extra = {}) => call('POST', '/enrollments', auth[who], { courseId, phone: PHONE, ...extra });
 const countIn = async (courseId) =>
   Number((await db.query('select count(*) from enrollments where "courseId" = $1', [courseId])).rows[0].count);
@@ -164,39 +164,39 @@ test('신청 생성: request body에 userId를 넣으면 자기 id여도 400', a
 
 // 아래 3건은 결함 8(docs/v2-defects.md)을 잡는다. 번호는 docs/diagnosis/defect-8.md 3.4절의 그림과 같다.
 // 요청한 사람(토큰)과 request body의 userId가 다른 요청을 보낸다. 거부하는 방식(400인지 403인지)은 정하지 않고,
-// 다른 사람의 신청이 생성되지 않았는지를 DB에서 확인한다.
+// 다른 사람의 신청으로 저장되지 않았는지를 DB에서 확인한다.
 const ownedBy = async (userId) =>
   Number((await db.query('select count(*) from enrollments where "userId" = $1 and id <> all($2)', [userId, SEEDED])).rows[0].count);
 const createWith = (who, userId) => call('POST', '/enrollments', auth[who], { userId, courseId: 'c4', phone: PHONE });
 
-test('신청 생성 1: 다른 학생의 id를 request body에 넣어도 그 학생의 신청이 생성되지 않음', async () => {
+test('신청 생성 1: 다른 학생의 id를 request body에 넣어도 그 학생의 신청으로 저장되지 않음', async () => {
   await cleanup();
   const res = await createWith('student3', 'u4');
-  assert.equal(await ownedBy('u4'), 0, 'student4(u4)의 이름으로 생성된 신청의 건수');
+  assert.equal(await ownedBy('u4'), 0, 'student4(u4)의 신청으로 저장된 건수');
   assert.notEqual(res.status, 201, '상태 코드');
   await cleanup();
 });
 
-test('신청 생성 2: 관리자의 id를 request body에 넣어도 관리자의 신청이 생성되지 않음', async () => {
+test('신청 생성 2: 관리자의 id를 request body에 넣어도 관리자의 신청으로 저장되지 않음', async () => {
   await cleanup();
   const res = await createWith('student3', 'a1');
-  assert.equal(await ownedBy('a1'), 0, 'admin1(a1)의 이름으로 생성된 신청의 건수');
+  assert.equal(await ownedBy('a1'), 0, 'admin1(a1)의 신청으로 저장된 건수');
   assert.notEqual(res.status, 201, '상태 코드');
   await cleanup();
 });
 
-test('신청 생성 3: request body의 userId가 무엇이든 생성된 신청의 소유자는 요청한 사람', async () => {
+test('신청 생성 3: request body의 userId가 무엇이든 신청의 소유자는 요청한 사람', async () => {
   await cleanup();
   // student3(u3)의 토큰 하나로, request body의 userId만 바꿔 가며 보낸다.
   for (const userId of ['u3', 'u4', 'u5', 'i1', 'a1']) await createWith('student3', userId);
   const { rows } = await db.query('select "userId" from enrollments where id <> all($1)', [SEEDED]);
   const notMine = rows.filter((r) => r.userId !== 'u3').length;
-  assert.equal(notMine, 0, '요청한 사람(u3)이 아닌 사용자의 이름으로 생성된 신청의 건수');
+  assert.equal(notMine, 0, '요청한 사람(u3)이 아닌 사용자의 신청으로 저장된 건수');
   await cleanup();
 });
 
 // 권한 표(쓰기). 읽기 경로의 표는 permission-matrix.test.mjs에 있고, README의 권한 표와 같은 내용이다.
-// 쓰기는 요청할 때마다 DB가 바뀌므로 칸마다 신청을 새로 생성하고 삭제한다. c4의 담당 강사는 instructor2다.
+// 쓰기는 요청할 때마다 DB가 바뀌므로 칸마다 새로 신청하고 삭제한다. c4의 담당 강사는 instructor2다.
 test('권한 표: POST /enrollments → 비로그인 401, 학생 201, 강사 403, 관리자 403', async () => {
   const expected = { 비로그인: 401, student3: 201, student4: 201, instructor1: 403, instructor2: 403, admin1: 403 };
   for (const [who, status] of Object.entries(expected)) {
