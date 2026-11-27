@@ -1,4 +1,4 @@
-// can() 단위 테스트: 역할 × 행위 × 소유 여부. 앞의 16건은 v1(apps/web/tests/policy.test.mjs)과 같은 경우이고, 뒤의 11건은 API에 새로 생긴 행위다.
+// can() 단위 테스트: 역할 × 행위 × 소유 여부. 앞의 16건은 v1(apps/web/tests/policy.test.mjs)과 같은 경우이고, 그 뒤는 API에 새로 생긴 행위다.
 // 빌드한 결과물(dist/authz/policy.js)을 직접 불러온다.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -42,6 +42,18 @@ const cases = [
   ['instructor → 다른 강사 강의 명단', instructor, 'roster:read', { instructorId: 'i2' }, false],
   ['instructor → 명단, 리소스 없음', instructor, 'roster:read', undefined, false],
   ['admin → 명단', admin, 'roster:read', { instructorId: 'i2' }, true],
+  // 신청 생성. 대상이 아직 없으므로 리소스 없이 역할만 본다.
+  ['비로그인 → 신청 생성', null, 'enrollment:create', undefined, false],
+  ['student → 신청 생성', student, 'enrollment:create', undefined, true],
+  ['instructor → 신청 생성', instructor, 'enrollment:create', undefined, false],
+  ['admin → 신청 생성(대리 신청 없음)', admin, 'enrollment:create', undefined, false],
+  // 신청 취소. 소유자와 관리자만.
+  ['비로그인 → 신청 취소', null, 'enrollment:cancel', mine, false],
+  ['student → 본인 신청 취소', student, 'enrollment:cancel', mine, true],
+  ['student → 타인 신청 취소', student, 'enrollment:cancel', others, false],
+  ['student → 신청 취소, 리소스 없음', student, 'enrollment:cancel', undefined, false],
+  ['instructor → 자기 강의의 신청 취소(조회만 가능)', instructor, 'enrollment:cancel', mine, false],
+  ['admin → 신청 취소', admin, 'enrollment:cancel', others, true],
 ];
 
 for (const [name, user, action, resource, expected] of cases) {
