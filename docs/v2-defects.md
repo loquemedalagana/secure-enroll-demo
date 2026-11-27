@@ -141,7 +141,7 @@ git checkout v2-defect-N                  # 결함 상태 재현
 
 - **분류**: A01 Broken Access Control / CWE-639 (사용자가 제어하는 키를 통한 인가 우회)
 - **어떻게 생기는가**: 신청 생성(`POST /enrollments`)이 누구의 신청인지를 request body의 `userId`에서 읽습니다.
-- **왜 위험한가**: 로그인한 사용자가 request body의 `userId`를 바꿔 다른 사용자 이름으로 신청을 생성할 수 있습니다.
+- **왜 위험한가**: 로그인한 사용자가 request body의 `userId`를 바꿔 다른 사용자 이름으로 신청할 수 있습니다.
 - **수정 방향**: 신청자는 토큰에서만 읽습니다. request body에서 `userId` 필드를 없애고, 선언하지 않은 필드가 오면 400으로 거부합니다.
 - **검증 테스트**: 학생 `u1`의 토큰으로 request body에 `userId: "u2"`를 넣어 보내면 400이고, `u2`의 신청이 생기지 않습니다.
 - **브랜치**: `v2/07b-enroll-create`
