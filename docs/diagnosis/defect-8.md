@@ -6,12 +6,12 @@
 | 경로 | `POST /enrollments` (학생의 토큰이 필요한 경로) |
 | 분류 | OWASP Top 10 2025 A01 Broken Access Control / CWE-639 (사용자가 제어하는 키를 통한 인가 우회). IDOR(Insecure Direct Object Reference)라고 부르는 유형입니다 |
 | 위험도 | 높음 |
-| 해당 구성 요소 | 객체의 속성(신청의 소유자). 시행 지점(PEP)과 판단(PE)은 정상으로 동작하고, 판단이 끝난 뒤에 쓰는 값을 검증되지 않은 request body에서 가져옵니다 |
+| 해당 구성 요소 | 객체의 속성(소유자, 여기서는 신청자). 시행 지점(PEP)과 판단(PE)은 정상으로 동작합니다. 판단이 끝난 뒤 핸들러가 저장할 값을 클라이언트가 보낸 request body에서 읽습니다 |
 | 상태 | 조치 완료 (`v2-fix-8`) |
 
 ## 1. 요약
 
-신청 생성이 누구의 신청인지를 request body의 `userId`에서 읽습니다. 요청이 보낸 식별자를 권한 확인 없이 그대로 쓰는 IDOR입니다. v1의 결함 2(신청 조회에서 소유자를 확인하지 않음)가 읽기의 IDOR였고, 이것은 쓰기의 IDOR입니다. 로그인한 학생이 request body의 `userId`만 바꾸면 다른 사용자의 이름으로 신청할 수 있습니다. 인증과 인가는 모두 통과합니다. 토큰이 유효하고, 학생에게는 신청할 권한이 있기 때문입니다.
+API는 신청을 받을 때 신청자를 request body의 `userId` 필드로 정합니다. 요청이 보낸 식별자를 권한 확인 없이 그대로 쓰는 IDOR입니다. v1의 결함 2(신청 조회에서 소유자를 확인하지 않음)는 신청을 조회할 때의 IDOR였고, 이 결함은 신청할 때의 IDOR입니다. 로그인한 학생이 request body의 `userId`만 바꾸면 다른 사용자의 이름으로 신청할 수 있습니다. 인증과 인가는 모두 통과합니다. 토큰이 유효하고, 학생에게는 신청할 권한이 있기 때문입니다.
 
 위험도를 높음으로 본 근거입니다.
 
@@ -20,11 +20,11 @@
 | 높이는 쪽 | 학생 계정 하나면 됩니다. 바꾸는 것은 request body의 값 하나입니다 |
 | 높이는 쪽 | 대상에 제한이 없습니다. 다른 학생뿐 아니라 강사와 관리자의 id로도 신청됩니다 |
 | 높이는 쪽 | 다른 사람의 이름으로 강의의 정원을 채울 수 있습니다. 정원이 찬 강의는 신청을 받지 않습니다 |
-| 높이는 쪽 | 요청한 사람은 이 신청을 취소할 수 없습니다. 신청은 본인과 관리자만 취소할 수 있어서, 이름을 도용당한 사람이나 관리자가 취소해야 합니다 |
+| 높이는 쪽 | 요청한 사람은 이 신청을 취소할 수 없습니다. 신청은 본인과 관리자만 취소할 수 있어서, 이름이 도용된 사람(피해자)이나 관리자가 취소해야 합니다 |
 | 높이는 쪽 | 서버에는 요청한 사람(토큰의 사용자)과 신청자가 다르다는 기록이 남지 않습니다. 요청 로그의 `uid`는 요청한 사람이고, 신청에는 request body의 값만 남습니다 |
 | 낮추는 쪽 | 로그인해야 합니다. 토큰 없이는 401입니다 |
 | 낮추는 쪽 | 다른 사람의 정보를 읽게 되지는 않습니다. 응답에 나오는 것은 요청한 사람이 보낸 값입니다 |
-| 낮추는 쪽 | 이름이 쓰인 사람은 자기 신청 목록에서 그 신청을 볼 수 있고 직접 취소할 수 있습니다 |
+| 낮추는 쪽 | 피해자는 신청 목록에서 그 신청을 확인하고 직접 취소할 수 있습니다 |
 
 ## 2. 재현 절차
 
@@ -87,7 +87,7 @@ node .github/scripts/defects/defect-8.mjs
 
 ## 3. 원인
 
-요청한 사람이 누구인지는 인증 Guard가 토큰으로 확인합니다. 신청의 소유자는 그 값이 아니라 request body에서 따로 읽습니다.
+인증 Guard는 토큰으로 요청한 사람이 누구인지 확인합니다. 그런데 핸들러는 신청을 저장할 때 이 사람을 신청자로 쓰지 않고, request body의 `userId` 필드를 신청자로 씁니다.
 
 ```mermaid
 flowchart LR
@@ -115,11 +115,11 @@ flowchart LR
   linkStyle 3 stroke:#A32D2D,stroke-width:3px
 ```
 
-빨강은 검증되지 않은 값을 쓰는 곳과 그 값이 저장되는 경로, 초록은 정상으로 동작하는 곳입니다.
+빨강은 클라이언트가 보낸 값을 그대로 쓰는 곳과 그 값이 저장되는 경로, 초록은 정상으로 동작하는 곳입니다.
 
 ### 3.1 원인 코드
 
-- request body의 형식이 `userId`를 받습니다: [`enrollments/create-enrollment.dto.ts` 5~8행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-8/apps/api/src/enrollments/create-enrollment.dto.ts#L5-L8).
+- request body의 형식(DTO)에 `userId` 필드가 있습니다: [`enrollments/create-enrollment.dto.ts` 5~8행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-8/apps/api/src/enrollments/create-enrollment.dto.ts#L5-L8).
 - 핸들러가 request body의 `userId`를 서비스에 넘깁니다: [`enrollments/enrollments.controller.ts` 23~25행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-8/apps/api/src/enrollments/enrollments.controller.ts#L23-L25). 토큰의 사용자(`@CurrentUser`)는 이 핸들러에서 쓰이지 않습니다.
 - 서비스는 받은 값을 그대로 저장합니다: [`enrollments/enrollments.service.ts` 39행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-8/apps/api/src/enrollments/enrollments.service.ts#L39).
 
@@ -170,7 +170,7 @@ flowchart LR
   linkStyle 2 stroke:#A32D2D,stroke-width:3px
 ```
 
-빨강은 검증되지 않은 값을 쓰는 곳과 그 값이 저장되는 경로, 파랑은 테스트입니다.
+빨강은 클라이언트가 보낸 값을 그대로 쓰는 곳과 그 값이 저장되는 경로, 파랑은 테스트입니다.
 
 | 테스트 | 보내는 요청 | 개발 관점: 무엇을 확인하나 | 보안 관점: 무엇을 지키나 |
 |---|---|---|---|
@@ -205,11 +205,11 @@ flowchart LR
 | 주체 | 정상. 토큰으로 검증한 `student1` | `auth/auth.guard.ts` |
 | 시행 (PEP) | 정상. 토큰이 없으면 401, 학생이 아니면 403입니다 | `auth/auth.guard.ts`, `authz/authz.guard.ts` |
 | 판단 (PE) | 정상. `can(student1, 'enrollment:create')`는 `true`를 반환합니다. 누구의 신청인지는 판단의 입력에 없습니다 | `authz/policy.ts` |
-| 객체의 속성 (소유자) | **검증되지 않은 request body에서 옵니다. 결함은 여기입니다** | [`enrollments/enrollments.controller.ts` 23~25행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-8/apps/api/src/enrollments/enrollments.controller.ts#L23-L25) |
+| 객체의 속성 (소유자) | **클라이언트가 보낸 request body에서 옵니다. 결함은 여기입니다** | [`enrollments/enrollments.controller.ts` 23~25행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-8/apps/api/src/enrollments/enrollments.controller.ts#L23-L25) |
 
 결함 1과 2는 시행 지점이 요청을 막지 못한 경우였고, 결함 6은 시행 지점이 열어 준 범위 밖의 객체를 쿼리가 읽은 경우였습니다. 결함 8에서는 시행과 판단이 모두 맞게 끝납니다. 그 뒤에 생성되는 객체의 소유자가 판단에 쓰인 주체와 다른 값으로 정해집니다.
 
-제로 트러스트의 원칙으로 보면 주체는 요청마다 검증하고 있지만, request body의 값은 검증 없이 신뢰한 경우입니다.
+제로 트러스트의 원칙으로 보면, 주체는 요청마다 검증하지만 request body의 `userId`는 토큰의 사용자와 같은지 확인하지 않고 신뢰했습니다.
 
 ### 3.6 파라미터 변조와의 차이
 
@@ -260,7 +260,7 @@ flowchart TD
 
 #### 실제로 바꿔 본 결과
 
-세 방안을 테스트를 더한 커밋의 코드에 각각 적용해 돌려 봤습니다. 이 변경들은 커밋하지 않았습니다.
+결함을 잡는 테스트를 추가한 뒤, 그 코드에 세 방안을 하나씩 적용해 테스트를 돌렸습니다. 이 변경들은 커밋하지 않았습니다.
 
 방안 1:
 
@@ -339,11 +339,11 @@ flowchart TD
 
 - 세 방안 모두 결함을 고칩니다. 어느 방안을 적용해도 다른 사용자의 이름으로는 신청할 수 없었습니다. `userId`의 형식을 바꿔 보내도(배열, 숫자, 객체, 대소문자, 공백, 같은 키를 두 번) 결과는 같았습니다.
 - 방안 1에서는 요청 로그에 `allowed`가 true인 403이 남습니다. PE는 학생의 신청 생성(`enrollment:create`)을 허용했고, 요청을 거부한 것은 핸들러이기 때문입니다. 판단을 PE 한 곳에서 한다는 구조에서 벗어나고, 로그의 `allowed`만 보고 거부된 요청을 찾으면 이 요청이 빠집니다.
-- 방안 2에서는 request body의 `userId`를 읽는 코드가 남지 않습니다. 방안 1과 3에서는 DTO가 `userId`를 계속 받고, 저장할 때도 request body의 값을 씁니다. 같은 DTO를 쓰는 경로가 새로 생길 때 빠뜨리면 결과가 다릅니다. 방안 1은 비교하는 줄을 빠뜨리면 결함이 다시 생깁니다. 방안 3은 정책이 객체가 없으면 거부하므로, 같은 행위(`enrollment:create`)를 선언한 경로에서 객체 선언을 빠뜨리면 403이 됩니다.
+- 방안 2에서는 request body의 `userId`를 읽는 코드가 남지 않습니다. 방안 1과 3에서는 DTO가 `userId`를 계속 받고, 저장할 때도 request body의 값을 씁니다. 두 방안의 차이는 같은 DTO를 쓰는 경로를 새로 만들 때 나타납니다. 방안 1에서는 비교하는 줄을 빠뜨리면 그 경로에 같은 취약점이 생깁니다. 방안 3에서는 같은 행위(`enrollment:create`)를 선언한 경로에서 객체 선언(`@Authorize`의 `resource`)을 빠뜨리면, 정책이 객체가 없다는 이유로 거부해서 요청이 403이 됩니다.
 - 방안 2에서는 다른 사용자의 id를 넣은 요청이 400으로 끝납니다. 요청 로그에는 `status` 400, `allowed` true로 남아서, 형식이 틀린 다른 요청과 구분되지 않습니다. 방안 3은 `allowed` false로 남습니다.
-- 방안 3에서는 인가 Guard가 입력 검증보다 먼저 실행됩니다. request body가 비어 있거나 형식이 틀린 요청이 400이 아니라 403이 됩니다. 테스트 "형식이 틀린 request body는 400"이 이 때문에 실패합니다. 이 테스트는 결함 상태의 동작을 적은 것이라, 방안 3을 고르면 기대를 403으로 바꾸면 됩니다. 방안 3의 결점은 아닙니다. Guard가 검증되지 않은 request body를 읽지만, 문자열이 아닌 값은 판단에 넘기지 않아서 통과한 경우는 없었습니다.
+- 방안 3에서는 인가 Guard가 입력값 검증보다 먼저 실행됩니다. request body가 비어 있거나 형식이 틀린 요청이 400이 아니라 403이 됩니다. 테스트 "형식이 틀린 request body는 400"이 이 때문에 실패합니다. 이 테스트의 기댓값 400은 인가 Guard가 request body를 읽지 않던 때의 동작에 맞춘 값이므로, 방안 3을 고른다면 403으로 고치면 됩니다. 방안 3의 결점은 아닙니다. 이때 Guard는 입력값 검증을 거치지 않은 request body를 읽습니다. 다만 `userId`가 문자열이 아니면 Guard가 객체를 만들지 않아 정책이 거부하므로, 그런 값으로 통과한 요청은 없었습니다.
 
-결함 상태에서 `U4`와 `"u4 "`가 500인 것은 존재하지 않는 사용자 id로 저장하려다 외래 키 제약에 걸린 것입니다. request body의 값을 그대로 저장하기 때문에 생기는 오류이고, 세 방안 모두에서 없어집니다.
+결함 상태에서는 `userId` 필드에 `U4`나 `"u4 "`를 넣어 보내면 500 응답이 나옵니다. API가 존재하지 않는 사용자 id를 저장하려다 외래 키 제약 조건(참조 무결성)에 걸리기 때문입니다. 이 오류는 request body의 값을 그대로 저장해서 생깁니다. 세 방안 중 어느 것을 적용해도 500 응답은 나오지 않습니다.
 
 방안 2의 "8건 실패"는 기존 테스트가 request body에 `userId`를 넣어 보내기 때문입니다. 응답은 400입니다. request body에서 `userId`를 빼도록 테스트의 도우미 함수 두 곳을 고치면 131건이 모두 통과합니다.
 
@@ -363,9 +363,9 @@ flowchart TD
 
 **이유**: 이 결함의 원인은 비교 한 줄이 빠진 것이 아니라, 서버가 토큰으로 이미 아는 값을 request body에서 다시 받는 것입니다. 방안 2는 그 값을 받지 않습니다. 신청자는 인증 Guard가 검증한 주체 하나로만 정해지고, request body의 `userId`를 읽는 코드가 남지 않습니다. 호출하는 쪽도 자기 id를 알아내서 보낼 필요가 없습니다.
 
-**채택하지 않은 대안 (방안 1)**: 2줄로 결함을 고칩니다. 판단을 PE와 핸들러 두 곳에서 하게 되고, 요청 로그에 거부했는데 `allowed`가 true인 줄이 남습니다. 같은 DTO를 쓰는 경로에서 비교를 빠뜨리면 결함이 다시 생깁니다.
+**채택하지 않은 대안 (방안 1)**: 2줄로 결함을 고칩니다. 판단을 PE와 핸들러 두 곳에서 하게 되고, 요청 로그에 거부했는데 `allowed`가 true인 줄이 남습니다. 같은 DTO를 쓰는 경로에서 비교하는 줄을 빠뜨리면 그 경로에 같은 취약점이 생깁니다.
 
-**채택하지 않은 대안 (방안 3)**: 판단을 PE 한 곳에서 하고, 다른 사용자의 id를 넣은 요청이 요청 로그에 403, `allowed` false로 남습니다. 이 점은 방안 2보다 낫습니다. 선언을 빠뜨리면 거부되는 것도 장점입니다. 채택하지 않은 이유는 request body의 `userId`가 남는 것입니다. 서버가 이미 아는 값을 받아서 같은지 확인하게 되고, 인가 Guard에 검증 전의 request body를 읽는 코드가 생깁니다.
+**채택하지 않은 대안 (방안 3)**: 판단을 PE 한 곳에서 하고, 다른 사용자의 id를 넣은 요청이 요청 로그에 403, `allowed` false로 남습니다. 이 점은 방안 2보다 낫습니다. 선언을 빠뜨리면 거부되는 것도 장점입니다. 채택하지 않은 이유는 request body에 `userId` 필드가 그대로 남기 때문입니다. 서버는 토큰으로 이미 아는 값을 다시 받아서 같은지 확인해야 하고, 인가 Guard에는 입력값 검증을 거치지 않은 request body를 읽는 코드가 생깁니다.
 
 **감수하는 것**:
 
@@ -443,8 +443,8 @@ node .github/scripts/defects/defect-8.mjs --expect blocked
 |---|---|---|
 | request body에 다른 학생의 id | 201, 그 학생의 이름으로 신청됨 | 400, 신청되지 않음 |
 | request body에 관리자의 id | 201, 관리자의 이름으로 신청됨 | 400, 신청되지 않음 |
-| request body에 자기 id | 201 | 400 (request body가 `userId`를 받지 않음) |
-| request body에 `userId` 없이 | 400 | 201, 토큰의 사용자의 신청 |
+| request body에 본인의 id | 201 | 400 (request body에 `userId` 필드가 없음) |
+| request body에 `userId` 없이 | 400 | 201, 요청한 사람의 이름으로 신청됨 |
 | 존재하지 않는 id (`U4`) | 500 | 400 |
 | 신청자를 정하는 값 | request body의 `userId` | 토큰의 사용자 |
 | 수정 태그의 API 테스트 132건 | 12건 실패 | 모두 통과 |
