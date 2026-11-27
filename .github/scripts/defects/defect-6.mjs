@@ -20,16 +20,16 @@ async function search(q) {
 const count = (rows, ids) => rows.filter((r) => ids.includes(r.id)).length;
 const describe = ({ status, rows }, extra = '') => `상태 ${status} · ${rows.length}건${extra}`;
 
-// 1. 기준: 제목에 없는 말로 찾으면 0건이어야 한다.
-const none = await search('없는 제목');
+// 1. 기준: 암호학 강의는 없다. 0건이어야 한다.
+const none = await search('암호학');
 // 2. 작은따옴표 하나. 검색어가 쿼리 문자열에 그대로 들어가면 문법 오류가 난다.
 const quote = await search("'");
-// 3. 조건을 항상 참으로 만든다. 제목에 없는 말인데 강의가 전부 나오면 조건이 바뀐 것이다.
+// 3. 조건을 항상 참으로 만든다. 암호학으로 검색했는데 강의가 전부 나오면 조건이 바뀐 것이다.
 // 검색어 뒤에 붙는 %'까지 문자열 비교의 일부가 되게 맞춘다: … OR '%'='%'
-const always = await search("없는 제목' OR '%'='");
+const always = await search("암호학' OR '%'='");
 // 4. 다른 테이블을 합친다. 로그인 없이 사용자 테이블과 신청 테이블을 읽는다.
-const users = await search(`없는 제목' UNION SELECT username, "passwordHash" FROM users --`);
-const enrollments = await search(`없는 제목' UNION SELECT id, phone FROM enrollments --`);
+const users = await search(`암호학' UNION SELECT username, "passwordHash" FROM users --`);
+const enrollments = await search(`암호학' UNION SELECT id, phone FROM enrollments --`);
 
 const leakedUsers = count(users.rows, USERNAMES);
 const leakedEnrollments = count(enrollments.rows, ENROLLMENT_IDS);
@@ -37,18 +37,18 @@ const leakedEnrollments = count(enrollments.rows, ENROLLMENT_IDS);
 finish(
   '결함 6: 강의 검색(GET /courses?q=)의 검색어 처리',
   [
-    { request: '검색어: 제목에 없는 말 (토큰 없음, 0건이 맞음)', result: describe(none) },
+    { request: '검색어: 암호학 (토큰 없음, 0건이어야 함)', result: describe(none) },
     { request: "검색어: 작은따옴표 하나 (')", result: describe(quote) },
     {
-      request: "검색어: 제목에 없는 말 + ' OR '%'='",
+      request: "검색어: 암호학' OR '%'='",
       result: describe(always, ` · 강의 ${count(always.rows, COURSE_IDS)}건`),
     },
     {
-      request: '검색어: 제목에 없는 말 + UNION SELECT … FROM users',
+      request: "검색어: 암호학' UNION SELECT … FROM users",
       result: describe(users, ` · 사용자 테이블에서 온 행 ${leakedUsers}건(계정 이름과 비밀번호 해시)`),
     },
     {
-      request: '검색어: 제목에 없는 말 + UNION SELECT … FROM enrollments',
+      request: "검색어: 암호학' UNION SELECT … FROM enrollments",
       result: describe(enrollments, ` · 신청 테이블에서 온 행 ${leakedEnrollments}건(신청 id와 전화번호)`),
     },
   ],

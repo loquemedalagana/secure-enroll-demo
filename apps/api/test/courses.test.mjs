@@ -33,7 +33,7 @@ test('강의 검색: 제목에 검색어가 들어 있는 강의만, 대소문�
   const search = async (q) => (await get(`/courses?q=${encodeURIComponent(q)}`)).json();
   assert.deepEqual(await search('보안'), [{ id: 'c1', title: '웹 보안 입문' }]);
   assert.deepEqual(await search('실습'), [{ id: 'c2', title: '시큐어 코딩 실습' }]);
-  assert.deepEqual(await search('없는 제목'), []);
+  assert.deepEqual(await search('암호학'), []);
 });
 
 test('강의 검색: q가 비어 있으면 전체 목록', async () => {
@@ -74,7 +74,7 @@ test('강의 검색: %와 _와 역슬래시는 와일드카드가 아니라 글�
 // 아래 5건은 결함 6(docs/v2-defects.md)을 잡는다. 번호는 docs/diagnosis/defect-6.md 3.4절의 그림과 같다.
 // 결함 상태에서는 응답에 다른 테이블의 값(비밀번호 해시, 전화번호)이 들어온다.
 // 실패할 때 그 값이 출력에 찍히지 않도록 응답 전체를 비교하지 않고 상태 코드와 건수만 비교한다.
-const NO_MATCH = '없는 제목';
+const NO_MATCH = '암호학';
 const INJECTIONS = {
   quote: "'",
   always: `${NO_MATCH}' OR '%'='`,
@@ -101,7 +101,7 @@ test('강의 검색 1: 작은따옴표가 든 검색어도 오류 없이 200에 
 test('강의 검색 2: 검색어로 조건을 항상 참으로 만들 수 없음', async () => {
   const { status, rows } = await searchSummary(INJECTIONS.always);
   assert.equal(status, 200, '상태 코드');
-  assert.equal(count(rows), 0, '제목에 없는 말인데 나온 강의의 건수');
+  assert.equal(count(rows), 0, '암호학으로 검색했는데 나온 강의의 건수');
 });
 
 test('강의 검색 3: 검색어로 사용자 테이블을 읽을 수 없음', async () => {

@@ -64,15 +64,15 @@ curl -s -G --data-urlencode "q='" http://127.0.0.1:4000/courses
 요청 3 (조건을 항상 참으로):
 
 ```bash
-curl -s -G --data-urlencode "q=없는 제목' OR '%'='" http://127.0.0.1:4000/courses
+curl -s -G --data-urlencode "q=암호학' OR '%'='" http://127.0.0.1:4000/courses
 ```
 
-제목에 없는 말로 찾았는데 강의 2건이 모두 나옵니다.
+`암호학`으로 검색했는데 강의 2건이 모두 나옵니다.
 
 요청 4 (사용자 테이블을 합침):
 
 ```bash
-curl -s -G --data-urlencode "q=없는 제목' UNION SELECT username, \"passwordHash\" FROM users --" http://127.0.0.1:4000/courses
+curl -s -G --data-urlencode "q=암호학' UNION SELECT username, \"passwordHash\" FROM users --" http://127.0.0.1:4000/courses
 ```
 
 토큰 없이 200이고 5건입니다(해시는 이 문서에서 가렸습니다).
@@ -98,15 +98,15 @@ node .github/scripts/defects/defect-6.mjs
 ```
 결함 6: 강의 검색(GET /courses?q=)의 검색어 처리
 대상: http://127.0.0.1:4000
-- 검색어: 제목에 없는 말 (토큰 없음, 0건이 맞음)
+- 검색어: 암호학 (토큰 없음, 0건이어야 함)
     → 상태 200 · 0건
 - 검색어: 작은따옴표 하나 (')
     → 상태 500 · 0건
-- 검색어: 제목에 없는 말 + ' OR '%'='
+- 검색어: 암호학' OR '%'='
     → 상태 200 · 2건 · 강의 2건
-- 검색어: 제목에 없는 말 + UNION SELECT … FROM users
+- 검색어: 암호학' UNION SELECT … FROM users
     → 상태 200 · 5건 · 사용자 테이블에서 온 행 5건(계정 이름과 비밀번호 해시)
-- 검색어: 제목에 없는 말 + UNION SELECT … FROM enrollments
+- 검색어: 암호학' UNION SELECT … FROM enrollments
     → 상태 200 · 3건 · 신청 테이블에서 온 행 3건(신청 id와 전화번호)
 판정: 취약
 ```
@@ -162,8 +162,8 @@ flowchart LR
 |---|---|---|
 | `보안` | `title ILIKE '%`**`보안`**`%' ORDER BY …` | 기대한 동작 |
 | `'` | `title ILIKE '%`**`'`**`%' ORDER BY …` | 문자열이 먼저 닫혀 문법 오류 (500) |
-| `없는 제목' OR '%'='` | `title ILIKE '%`**`없는 제목' OR '%'='`**`%' ORDER BY …` | `'%'='%'`가 참이라 모든 강의 |
-| `없는 제목' UNION SELECT username, "passwordHash" FROM users --` | `title ILIKE '%`**`없는 제목' UNION SELECT … FROM users --`**`%' ORDER BY …` | `--` 뒤는 주석이 되고, 사용자 테이블이 합쳐짐 |
+| `암호학' OR '%'='` | `title ILIKE '%`**`암호학' OR '%'='`**`%' ORDER BY …` | `'%'='%'`가 참이라 모든 강의 |
+| `암호학' UNION SELECT username, "passwordHash" FROM users --` | `title ILIKE '%`**`암호학' UNION SELECT … FROM users --`**`%' ORDER BY …` | `--` 뒤는 주석이 되고, 사용자 테이블이 합쳐짐 |
 
 ### 3.3 이 결함을 처음 잡은 테스트
 
@@ -217,7 +217,7 @@ flowchart LR
 | 테스트 | 보내는 검색어 | 개발 관점: 무엇을 확인하나 | 보안 관점: 무엇을 지키나 |
 |---|---|---|---|
 | 1 작은따옴표가 든 검색어도 오류 없이 200에 0건 | `'` | 특수문자가 든 검색어가 500을 내지 않는지 | 검색어가 쿼리의 문법을 깨지 못합니다. 오류 응답은 쿼리가 바뀐다는 것을 알려 주는 첫 신호입니다 |
-| 2 검색어로 조건을 항상 참으로 만들 수 없음 | `없는 제목' OR '%'='` | 제목에 없는 말로 찾으면 0건인지 | 검색어가 조건을 바꾸지 못합니다 |
+| 2 검색어로 조건을 항상 참으로 만들 수 없음 | `암호학' OR '%'='` | 결과가 0건인지 | 검색어가 조건을 바꾸지 못합니다 |
 | 3 검색어로 사용자 테이블을 읽을 수 없음 | `… UNION SELECT … FROM users --` | 응답이 0건인지 | 객체의 범위. 계정 이름과 비밀번호 해시 |
 | 4 검색어로 신청 테이블을 읽을 수 없음 | `… UNION SELECT … FROM enrollments --` | 응답이 0건인지 | 객체의 범위. 전화번호 |
 | 5 어떤 검색어든 응답의 모든 행은 제목에 그 검색어가 든 강의 | 정상 검색어 1개와 위의 4개 | 검색 결과가 강의 목록을 제목으로 거른 것과 같은지 | 어떤 검색어가 와도 응답이 열어 준 범위(강의의 id와 제목) 안에 있습니다 |
@@ -358,12 +358,12 @@ this.prisma.$queryRaw`… ILIKE ${`%${q}%`} …`       // 방안 2: 쿼리의 �
 `UNION SELECT … FROM users`가 든 검색어를 보냈을 때 PostgreSQL 로그에 남은 줄입니다.
 
 ```
-결함     statement: SELECT id, title FROM courses WHERE title ILIKE '%없는 제목' UNION SELECT username, "passwordHash" FROM users --%' ORDER BY id ASC
-방안 1   statement: SELECT id, title FROM courses WHERE title ILIKE '%없는 제목'' UNION SELECT username, "passwordHash" FROM users --%' ORDER BY id ASC
+결함     statement: SELECT id, title FROM courses WHERE title ILIKE '%암호학' UNION SELECT username, "passwordHash" FROM users --%' ORDER BY id ASC
+방안 1   statement: SELECT id, title FROM courses WHERE title ILIKE '%암호학'' UNION SELECT username, "passwordHash" FROM users --%' ORDER BY id ASC
 방안 2   execute <unnamed>: SELECT id, title FROM courses WHERE title ILIKE $1 ORDER BY id ASC
-         Parameters: $1 = '%없는 제목'' UNION SELECT username, "passwordHash" FROM users --%'
+         Parameters: $1 = '%암호학'' UNION SELECT username, "passwordHash" FROM users --%'
 방안 3   execute <unnamed>: SELECT "public"."courses"."id", "public"."courses"."title" FROM "public"."courses" WHERE "public"."courses"."title" ILIKE ('%' || $1 || '%') ORDER BY "public"."courses"."id" ASC OFFSET $2
-         Parameters: $1 = '없는 제목'' UNION SELECT username, "passwordHash" FROM users --', $2 = '0'
+         Parameters: $1 = '암호학'' UNION SELECT username, "passwordHash" FROM users --', $2 = '0'
 ```
 
 이 표에서 볼 것은 세 가지입니다.
@@ -523,15 +523,15 @@ node .github/scripts/defects/defect-6.mjs --expect blocked
 ```
 결함 6: 강의 검색(GET /courses?q=)의 검색어 처리
 대상: http://127.0.0.1:4000
-- 검색어: 제목에 없는 말 (토큰 없음, 0건이 맞음)
+- 검색어: 암호학 (토큰 없음, 0건이어야 함)
     → 상태 200 · 0건
 - 검색어: 작은따옴표 하나 (')
     → 상태 200 · 0건
-- 검색어: 제목에 없는 말 + ' OR '%'='
+- 검색어: 암호학' OR '%'='
     → 상태 200 · 0건 · 강의 0건
-- 검색어: 제목에 없는 말 + UNION SELECT … FROM users
+- 검색어: 암호학' UNION SELECT … FROM users
     → 상태 200 · 0건 · 사용자 테이블에서 온 행 0건(계정 이름과 비밀번호 해시)
-- 검색어: 제목에 없는 말 + UNION SELECT … FROM enrollments
+- 검색어: 암호학' UNION SELECT … FROM enrollments
     → 상태 200 · 0건 · 신청 테이블에서 온 행 0건(신청 id와 전화번호)
 판정: 차단
 ```
