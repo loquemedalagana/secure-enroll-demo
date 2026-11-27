@@ -38,6 +38,27 @@ test('강의 검색: q가 비어 있으면 전체 목록', async () => {
   assert.equal((await (await get('/courses?q=')).json()).length, 2);
 });
 
+// 검색어의 형식 검증. 결함 6의 조치(매개변수 쿼리)와는 별개이고, 형식이 틀린 요청을 DB까지 보내지 않는다.
+test('강의 검색: q를 두 번 보내면 400', async () => {
+  const res = await get(`/courses?q=${encodeURIComponent('보안')}&q=${encodeURIComponent('실습')}`);
+  assert.equal(res.status, 400);
+  assert.equal((await res.json()).error, 'bad_request');
+});
+
+test('강의 검색: 널 바이트가 든 검색어는 400', async () => {
+  assert.equal((await get('/courses?q=%00')).status, 400);
+  assert.equal((await get(`/courses?q=${encodeURIComponent('보안')}%00`)).status, 400);
+});
+
+test('강의 검색: 검색어는 100자까지', async () => {
+  assert.equal((await get(`/courses?q=${'a'.repeat(100)}`)).status, 200);
+  assert.equal((await get(`/courses?q=${'a'.repeat(101)}`)).status, 400);
+});
+
+test('강의 목록: 선언하지 않은 쿼리 필드가 오면 400', async () => {
+  assert.equal((await get('/courses?sort=title')).status, 400);
+});
+
 // 아래 5건은 결함 6(docs/v2-defects.md)을 잡는다. 번호는 docs/diagnosis/defect-6.md 3.4절의 그림과 같다.
 // 결함 상태에서는 응답에 다른 테이블의 값(비밀번호 해시, 전화번호)이 들어온다.
 // 실패할 때 그 값이 출력에 찍히지 않도록 응답 전체를 비교하지 않고 상태 코드와 건수만 비교한다.
