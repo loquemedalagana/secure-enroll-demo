@@ -18,13 +18,13 @@ test('GET /health/live → 200', async () => {
   assert.deepEqual(await res.json(), { status: 'ok' });
 });
 
-test('GET /health/ready → 200 (DB에 쿼리가 닿음)', async () => {
+test('GET /health/ready → 200 (API가 DB에 쿼리를 보냄)', async () => {
   const res = await fetch(`${server.base}/health/ready`);
   assert.equal(res.status, 200);
   assert.deepEqual(await res.json(), { status: 'ok' });
 });
 
-test('DB에 닿지 않으면 /health/ready 503, /health/live 200', async () => {
+test('API가 DB에 접속하지 못하면 /health/ready 503, /health/live 200', async () => {
   // 아무것도 듣지 않는 포트를 DB 주소로 준다.
   const down = await startServer(4198, { DATABASE_URL: 'postgresql://enroll:dummy-local-only@127.0.0.1:1/enroll' });
   try {
@@ -43,7 +43,7 @@ test('등록되지 않은 경로 → 404, response body는 { error } 하나뿐',
   assert.deepEqual(await res.json(), { error: 'not_found' });
 });
 
-test('깨진 JSON request body → 400, 스택·경로·예외 문구가 응답에 없음', async () => {
+test('JSON 형식이 잘못된 request body → 400, 스택·경로·예외 문구가 응답에 없음', async () => {
   const res = await fetch(`${server.base}/health/live`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
