@@ -48,7 +48,7 @@ test('강의 검색: q를 두 번 보내면 400', async () => {
   assert.equal((await res.json()).error, 'bad_request');
 });
 
-test('강의 검색: 널 바이트가 든 검색어는 400', async () => {
+test('강의 검색: 널 바이트가 포함된 검색어는 400', async () => {
   assert.equal((await get('/courses?q=%00')).status, 400);
   assert.equal((await get(`/courses?q=${encodeURIComponent('보안')}%00`)).status, 400);
 });
@@ -73,7 +73,7 @@ test('강의 검색: %와 _와 역슬래시는 와일드카드가 아니라 글�
 });
 
 // 아래 5건은 결함 6(docs/v2-defects.md)을 잡는다. 번호는 docs/diagnosis/defect-6.md 3.4절의 그림과 같다.
-// 결함 상태에서는 API가 다른 테이블의 값(비밀번호 해시, 전화번호)이 든 응답을 보낸다.
+// 결함 상태에서는 API가 다른 테이블의 값(비밀번호 해시, 전화번호)이 포함된 응답을 보낸다.
 // assert.deepEqual은 실패할 때 비교한 두 값을 테스트 로그에 기록한다. 그래서 이 5건은 assert.deepEqual로 response body를
 // 기댓값과 비교하지 않고, assert.equal로 상태 코드(status)와 행의 수(rows.length)만 비교한다.
 const NO_MATCH = '암호학';
@@ -94,7 +94,7 @@ async function searchSummary(q) {
 }
 const count = (rows) => (rows === null ? null : rows.length);
 
-test('강의 검색 1: 작은따옴표가 든 검색어도 오류 없이 200에 0건', async () => {
+test('강의 검색 1: 작은따옴표가 포함된 검색어도 오류 없이 200에 0건', async () => {
   const { status, rows } = await searchSummary(INJECTIONS.quote);
   assert.equal(status, 200, '상태 코드');
   assert.equal(count(rows), 0, '건수');
@@ -103,28 +103,28 @@ test('강의 검색 1: 작은따옴표가 든 검색어도 오류 없이 200에 
 test('강의 검색 2: 검색어로 조건을 항상 참으로 만들 수 없음', async () => {
   const { status, rows } = await searchSummary(INJECTIONS.always);
   assert.equal(status, 200, '상태 코드');
-  assert.equal(count(rows), 0, '암호학으로 검색했는데 응답에 든 강의의 건수');
+  assert.equal(count(rows), 0, '암호학으로 검색했는데 응답에 포함된 강의의 건수');
 });
 
 test('강의 검색 3: 검색어로 사용자 테이블을 읽을 수 없음', async () => {
   const { status, rows } = await searchSummary(INJECTIONS.users);
   assert.equal(status, 200, '상태 코드');
-  assert.equal(count(rows), 0, '응답에 든 행의 건수');
+  assert.equal(count(rows), 0, '응답에 포함된 행의 건수');
 });
 
 test('강의 검색 4: 검색어로 신청 테이블을 읽을 수 없음', async () => {
   const { status, rows } = await searchSummary(INJECTIONS.enrollments);
   assert.equal(status, 200, '상태 코드');
-  assert.equal(count(rows), 0, '응답에 든 행의 건수');
+  assert.equal(count(rows), 0, '응답에 포함된 행의 건수');
 });
 
-test('강의 검색 5: 어떤 검색어든 응답의 모든 행은 제목에 그 검색어가 든 강의', async () => {
+test('강의 검색 5: 어떤 검색어든 응답의 모든 행은 제목에 그 검색어가 포함된 강의', async () => {
   const courses = await (await get('/courses')).json();
   for (const [name, q] of Object.entries({ normal: '보안', ...INJECTIONS })) {
     const { rows } = await searchSummary(q);
     const expected = courses.filter((c) => c.title.toLowerCase().includes(q.toLowerCase())).map((c) => c.id);
     const outside = (rows ?? []).filter((r) => !expected.includes(r.id)).length;
-    assert.equal(outside, 0, `검색어 ${name}: 제목에 검색어가 없는데 응답에 든 행의 건수`);
+    assert.equal(outside, 0, `검색어 ${name}: 제목에 검색어가 없는데 응답에 포함된 행의 건수`);
     assert.equal(count(rows), expected.length, `검색어 ${name}: 건수`);
   }
 });
