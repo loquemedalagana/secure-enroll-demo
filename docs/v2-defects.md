@@ -73,7 +73,7 @@ git checkout v2-defect-N                  # 결함 상태 재현
 
 결함은 모두 세미나 신청 서비스의 기능(강의, 신청, 학생·강사·관리자 역할)에 넣습니다. 분류는 OWASP Top 10 2025와 CWE를 따릅니다.
 
-### 결함 1. Guard를 컨트롤러마다 붙여서 새 컨트롤러가 기본으로 열림
+### 결함 1. 컨트롤러에 Guard를 붙이지 않음 (인증 누락)
 
 - **분류**: A07 Authentication Failures / CWE-306 (중요 기능의 인증 누락)
 - **어떻게 생기는가**: 인가 Guard를 추가하면서 인증·인가 Guard를 전역(`APP_GUARD`) 등록에서 컨트롤러마다 `@UseGuards`로 붙이는 방식으로 바꿉니다. 새로 만든 관리자 컨트롤러에 붙이는 것을 빠뜨려서 그 컨트롤러의 핸들러가 토큰 없이 열립니다. 핸들러에 `@Authorize`로 행위를 선언해 두었어도, 그것을 읽을 Guard가 돌지 않으면 아무 효과가 없습니다.
@@ -82,10 +82,10 @@ git checkout v2-defect-N                  # 결함 상태 재현
 - **검증 테스트**: 토큰 없이 `GET /admin/enrollments` → 401, 학생 토큰으로 → 403. 등록된 모든 경로에 토큰 없이 요청해 `@Public`이 아닌 경로가 모두 401인지 확인하는 테스트 1건.
 - **브랜치**: `v2/05-authorization`
 
-### 결함 2. 경로 문자열로 공개 경로를 열어 인증을 건너뜀
+### 결함 2. 경로의 앞부분만 비교해 공개 여부를 판단 (인증 누락)
 
 - **분류**: A07 Authentication Failures / CWE-306 (중요 기능의 인증 누락)
-- **어떻게 생기는가**: 강의 목록(`GET /courses`)을 로그인 없이 보여 주려고, Guard가 공개 여부를 판단하는 곳에 "경로가 `/courses`로 시작하면 공개"라는 조건을 넣습니다. 똑같이 `/courses`로 시작하는 수강생 명단(`GET /courses/:id/enrollments`)까지 토큰 없이 열립니다.
+- **어떻게 생기는가**: 강의 목록(`GET /courses`)을 로그인 없이 보여 주려고, Guard가 공개 여부를 판단하는 곳에 "경로가 `/courses`로 시작하면 공개"라는 조건을 넣습니다. 그 결과 API는 똑같이 `/courses`로 시작하는 수강생 명단 요청(`GET /courses/:id/enrollments`)에도 토큰 확인 없이 응답합니다.
 - **왜 위험한가**: 수강생 명단에는 전화번호가 있습니다. 공개 여부가 핸들러가 아니라 문자열 비교에 달려 있어서, `/courses` 아래에 경로를 새로 만들 때마다 인증 없이 열립니다.
 - **수정 방향**: 공개 여부는 핸들러에 붙인 `@Public`만으로 판단합니다. 경로 문자열 비교를 없앱니다.
 - **검증 테스트**: 토큰 없이 `GET /courses` → 200, 토큰 없이 `GET /courses/c1/enrollments` → 401.
@@ -150,8 +150,8 @@ git checkout v2-defect-N                  # 결함 상태 재현
 
 | # | 결함 | 브랜치 | 결함 태그 | 수정 태그 | 상태 |
 |---|---|---|---|---|---|
-| 1 | Guard를 컨트롤러마다 붙임 | `v2/05-authorization` | `v2-defect-1` | `v2-fix-1` | 수정함. [보고서](diagnosis/defect-1.md) |
-| 2 | 경로 문자열로 인증을 건너뜀 | `v2/05-authorization` | `v2-defect-2` | `v2-fix-2` | 수정함. [보고서](diagnosis/defect-2.md) |
+| 1 | 인증 누락 (컨트롤러에 Guard를 붙이지 않음) | `v2/05-authorization` | `v2-defect-1` | `v2-fix-1` | 수정함. [보고서](diagnosis/defect-1.md) |
+| 2 | 인증 누락 (경로의 앞부분만 비교) | `v2/05-authorization` | `v2-defect-2` | `v2-fix-2` | 수정함. [보고서](diagnosis/defect-2.md) |
 | 3 | 요청 로그에 토큰과 비밀번호 | `v2/06-logging` | `v2-defect-3` | `v2-fix-3` | 수정함. [보고서](diagnosis/defect-3.md) |
 | 4 | 스크립트가 읽을 수 있는 토큰 | `v2/08-web-to-api` | 미정 | 미정 | 계획 |
 | 5 | 상태 변경을 GET으로 받음 | `v2/09-web-enroll` | 미정 | 미정 | 계획 |
