@@ -2,7 +2,7 @@
 
 | 항목 | 내용 |
 |---|---|
-| 대상 | 이 저장소의 태그 `v2-defect-2`를 로컬에서 띄운 API (`http://127.0.0.1:4000`) |
+| 대상 | 태그 `v2-defect-2`의 코드로 로컬에서 띄운 API (`http://127.0.0.1:4000`) |
 | 경로 | `GET /courses/:id/enrollments` |
 | 분류 | OWASP Top 10 2025 A07 Authentication Failures / CWE-306 (중요 기능의 인증 누락) |
 | 위험도 | 높음 |
@@ -445,7 +445,7 @@ flowchart LR
 
 ## 5. 조치 뒤 재확인
 
-`v2-fix-2`를 로컬에서 띄우고 2절과 같은 스크립트를 실행한 결과입니다.
+태그 `v2-fix-2`의 코드로 API를 로컬에서 띄우고, 2절과 같은 스크립트를 실행한 결과입니다.
 
 ```bash
 node .github/scripts/defects/defect-2.mjs --expect blocked

@@ -2,7 +2,7 @@
 
 | 항목 | 내용 |
 |---|---|
-| 대상 | 이 저장소의 태그 `v2-defect-8`을 로컬에서 띄운 API (`http://127.0.0.1:4000`) |
+| 대상 | 태그 `v2-defect-8`의 코드로 로컬에서 띄운 API (`http://127.0.0.1:4000`) |
 | 경로 | `POST /enrollments` (학생의 토큰이 필요한 경로) |
 | 분류 | OWASP Top 10 2025 A01 Broken Access Control / CWE-639 (사용자가 제어하는 키를 통한 인가 우회). IDOR(Insecure Direct Object Reference)라고 부르는 유형입니다 |
 | 위험도 | 높음 |
@@ -422,7 +422,7 @@ flowchart LR
 
 ## 5. 조치 뒤 재확인
 
-`v2-fix-8`을 로컬에서 띄우고 2절과 같은 스크립트를 실행한 결과입니다.
+태그 `v2-fix-8`의 코드로 API를 로컬에서 띄우고, 2절과 같은 스크립트를 실행한 결과입니다.
 
 ```bash
 node .github/scripts/defects/defect-8.mjs --expect blocked

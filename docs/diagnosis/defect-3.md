@@ -2,7 +2,7 @@
 
 | 항목 | 내용 |
 |---|---|
-| 대상 | 이 저장소의 태그 `v2-defect-3`을 로컬에서 띄운 API (`http://127.0.0.1:4000`)와 그 프로세스의 출력 |
+| 대상 | 태그 `v2-defect-3`의 코드로 로컬에서 띄운 API (`http://127.0.0.1:4000`)와 그 프로세스의 출력 |
 | 경로 | `POST /auth/login`, 그리고 토큰을 붙여 보내는 모든 경로 |
 | 분류 | OWASP Top 10 2025 A09 Security Logging and Alerting Failures / CWE-532 (로그 파일에 민감 정보 기록) |
 | 위험도 | 중간 |
@@ -369,7 +369,7 @@ flowchart LR
 
 ## 5. 조치 뒤 재확인
 
-`v2-fix-3`을 로컬에서 띄우고 2절과 같은 스크립트를 실행한 결과입니다.
+태그 `v2-fix-3`의 코드로 API를 로컬에서 띄우고, 2절과 같은 스크립트를 실행한 결과입니다.
 
 ```bash
 node .github/scripts/defects/defect-3.mjs /tmp/api.log --expect blocked
