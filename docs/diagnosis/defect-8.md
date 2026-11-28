@@ -115,7 +115,9 @@ flowchart LR
   linkStyle 3 stroke:#A32D2D,stroke-width:3px
 ```
 
-빨강은 클라이언트가 보낸 값을 그대로 쓰는 곳과 그 값이 저장되는 경로, 초록은 정상으로 동작하는 곳입니다.
+- 빨간색 상자는 request body의 `userId`를 신청자로 쓰는 신청 생성 핸들러를 나타냅니다.
+- 빨간색 화살표는 request body의 `userId`가 `enrollments` 테이블에 저장되는 흐름을 나타냅니다.
+- 초록색 상자는 정상으로 동작하는 인증 Guard와 인가 Guard를 나타냅니다.
 
 ### 3.1 원인 코드
 
@@ -170,7 +172,10 @@ flowchart LR
   linkStyle 2 stroke:#A32D2D,stroke-width:3px
 ```
 
-빨강은 클라이언트가 보낸 값을 그대로 쓰는 곳과 그 값이 저장되는 경로, 파랑은 테스트입니다.
+- 빨간색 상자는 request body의 `userId`를 신청자로 쓰는 신청 생성 핸들러를 나타냅니다.
+- 빨간색 화살표는 request body의 `userId`가 `enrollments` 테이블에 저장되는 흐름을 나타냅니다.
+- 초록색 상자는 정상으로 동작하는 인증 Guard와 인가 Guard를 나타냅니다.
+- 파란색 상자는 테스트를 나타냅니다.
 
 | 테스트 | 보내는 요청 | 개발 관점: 무엇을 확인하나 | 보안 관점: 무엇을 지키나 |
 |---|---|---|---|
@@ -180,7 +185,7 @@ flowchart LR
 
 테스트는 거부하는 방식을 정하지 않습니다. 상태 코드는 201이 아닌지만 봅니다. request body의 `userId`를 토큰과 비교해 403으로 거부할 수도 있고, request body에서 `userId`를 없애 400으로 거부할 수도 있습니다. 어느 쪽으로 고칠지는 4.1절에서 방안을 적용해 보고 정합니다.
 
-이 커밋에서 API 테스트는 131건 중 128건 통과, 3건 실패입니다.
+이 커밋에서 API 테스트는 131건 중 128건이 통과하고 3건이 실패합니다.
 
 ```
 ✖ 신청 생성 1: 다른 학생의 id를 request body에 넣어도 그 학생의 신청이 생성되지 않음
@@ -457,7 +462,7 @@ node .github/scripts/defects/defect-8.mjs --expect blocked
 
 ### CI 실행 기록
 
-이 결함을 다룬 PR에서 실제로 돈 실행입니다.
+이 결함을 다룬 PR에서 실행된 CI 기록입니다.
 
 | 시점 | 커밋 | `api` 잡 | 실행 |
 |---|---|---|---|
