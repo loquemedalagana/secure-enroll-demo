@@ -1,4 +1,4 @@
-// 더미 시드. 실제 사용자·회사 데이터가 아니다. v1의 인메모리 데이터와 같은 id·값을 쓴다.
+// 더미 데이터를 DB에 저장하는 시드 스크립트다. 실제 사용자나 회사의 데이터가 아니다. v1의 인메모리 데이터와 같은 id와 값을 쓴다.
 // 실행: npm run build && npm run db:seed (여러 번 실행해도 같은 상태가 된다)
 import { PrismaPg } from '@prisma/adapter-pg';
 import { hashPassword } from './auth/password.js';
@@ -26,7 +26,7 @@ const courses = [
   { id: 'c4', title: '데이터베이스 기초', instructorId: 'i2', capacity: 30 },
 ];
 
-// phone은 더미 값(개인정보 예시용)
+// phone은 개인정보(전화번호)의 예로 둔 더미 값이다.
 const enrollments = [
   { id: 'e1', userId: 'u1', courseId: 'c1', phone: '010-0000-0001' },
   { id: 'e2', userId: 'u2', courseId: 'c1', phone: '010-0000-0002' },
@@ -40,7 +40,7 @@ try {
   const withHash = await Promise.all(
     users.map(async (u) => ({ ...u, passwordHash: await hashPassword(`${u.username}-pass`) })),
   );
-  // 기존 행을 비우고 다시 넣는다. 한 트랜잭션이라 중간에 실패하면 이전 상태로 남는다.
+  // 기존 행을 모두 삭제하고 시드의 행을 다시 추가한다. 트랜잭션 하나로 실행하므로, 중간에 실패하면 DB는 실행 전의 상태로 남는다.
   await prisma.$transaction([
     prisma.enrollment.deleteMany(),
     prisma.course.deleteMany(),
