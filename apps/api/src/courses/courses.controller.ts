@@ -9,14 +9,14 @@ import { SearchCoursesDto } from './search-courses.dto.js';
 export class CoursesController {
   constructor(private readonly courses: CoursesService) {}
 
-  // 강의 목록. 로그인하지 않아도 볼 수 있다. q가 있으면 제목에 그 말이 들어 있는 강의만 돌려준다.
+  // 강의 목록을 조회하는 공개 경로다. 쿼리 문자열에 q가 있으면 제목에 q가 포함된 강의만으로 응답한다.
   @Public()
   @Get()
   list(@Query() query: SearchCoursesDto): Promise<CourseView[]> {
     return query.q ? this.courses.search(query.q) : this.courses.list();
   }
 
-  // 강의 하나의 수강생 명단. 그 강의의 담당 강사와 관리자만 볼 수 있다(인가 Guard가 판단한다).
+  // 강의 하나의 수강생 명단을 조회한다. 그 강의의 담당 강사와 관리자만 조회할 수 있고, 인가 Guard가 can()을 호출해 판단한다.
   @Get(':id/enrollments')
   @Authorize('roster:read', { resource: 'course' })
   @Header('Cache-Control', 'no-store')

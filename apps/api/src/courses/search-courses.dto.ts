@@ -1,6 +1,6 @@
 import { IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 
-// 강의 목록의 쿼리 문자열. 여기 없는 필드가 오면 전역 ValidationPipe가 400으로 거부한다.
+// 강의 목록 요청의 쿼리 문자열이다. SearchCoursesDto에 없는 필드가 포함된 요청은 전역 ValidationPipe가 400으로 거부한다.
 // 이 검증은 검색어의 형식을 정하는 것이고 SQL 인젝션을 막는 조치가 아니다. 그 조치는 CoursesService.search에 있다.
 export class SearchCoursesDto {
   // q를 두 번 보내면 배열이 되어 IsString에서 거부된다.
