@@ -150,7 +150,7 @@ flowchart LR
 ```
 
 - 빨간색 상자는 검색어를 SQL 문자열에 이어 붙이는 강의 검색과, 그 쿼리가 읽는 `users` 테이블과 `enrollments` 테이블을 나타냅니다.
-- 빨간색 화살표는 검색어에 든 `UNION SELECT`가 `users` 테이블과 `enrollments` 테이블을 읽는 흐름을 나타냅니다.
+- 빨간색 화살표는 검색어에 포함된 `UNION SELECT`가 `users` 테이블과 `enrollments` 테이블을 읽는 흐름을 나타냅니다.
 - 초록색 상자는 정상으로 동작하는 Guard와, 강의 검색이 읽는 `courses` 테이블을 나타냅니다.
 
 강의 목록은 의도한 공개 경로입니다. 강의 목록 핸들러에 `@Public()`이 붙어 있어서([`courses/courses.controller.ts` 12행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-6/apps/api/src/courses/courses.controller.ts#L12)), Guard는 토큰 확인을 건너뛰고 요청을 통과시킵니다. Guard의 이 동작은 정상입니다.
@@ -166,7 +166,7 @@ flowchart LR
 
 | 검색어 | 실행되는 쿼리의 조건 부분 | 결과 |
 |---|---|---|
-| `보안` | `title ILIKE '%`**`보안`**`%' ORDER BY …` | API는 제목에 "보안"이 든 강의 1건으로 응답합니다. 의도한 동작입니다 |
+| `보안` | `title ILIKE '%`**`보안`**`%' ORDER BY …` | API는 제목에 "보안"이 포함된 강의 1건으로 응답합니다. 의도한 동작입니다 |
 | `'` | `title ILIKE '%`**`'`**`%' ORDER BY …` | DB가 검색어의 `'`를 문자열 리터럴의 끝으로 읽습니다. 뒤에 남은 `'`는 짝이 없어서 문법 오류가 나고, API는 500으로 응답합니다 |
 | `암호학' OR '%'='` | `title ILIKE '%`**`암호학' OR '%'='`**`%' ORDER BY …` | `'%'='%'`가 항상 참이어서 API는 모든 강의로 응답합니다 (tautology 기반) |
 | `암호학' UNION SELECT username, "passwordHash" FROM users --` | `title ILIKE '%`**`암호학' UNION SELECT … FROM users --`**`%' ORDER BY …` | DB는 `--` 뒤를 주석으로 읽고, 사용자 테이블의 행을 검색 결과에 합칩니다 (UNION 기반) |
@@ -229,9 +229,9 @@ flowchart LR
 | 2 검색어로 조건을 항상 참으로 만들 수 없음 | `암호학' OR '%'='` | API가 이 검색어에 200과 빈 배열(`[]`)로 응답하는지 | 검색어가 `WHERE` 조건을 항상 참으로 바꾸지 못하는가 (tautology 기반) |
 | 3 검색어로 사용자 테이블을 읽을 수 없음 | `… UNION SELECT … FROM users --` | API가 이 검색어에 200과 빈 배열(`[]`)로 응답하는지 | 기밀성. 공격자가 검색어로 사용자 테이블의 계정 이름과 비밀번호 해시를 읽을 수 없는가 (UNION 기반) |
 | 4 검색어로 신청 테이블을 읽을 수 없음 | `… UNION SELECT … FROM enrollments --` | API가 이 검색어에 200과 빈 배열(`[]`)로 응답하는지 | 기밀성. 공격자가 검색어로 신청 테이블의 전화번호를 읽을 수 없는가 (UNION 기반) |
-| 5 어떤 검색어든 응답의 모든 행은 제목에 그 검색어가 든 강의 | 정상 검색어 `보안`과 테스트 1~4의 검색어 4개 | API의 검색 응답이, 강의 전체 목록에서 제목에 검색어가 든 강의만 고른 결과와 같은지 | 기밀성. 공격자가 어떤 검색어를 보내도 강의 목록(`GET /courses`)에 없는 행을 읽을 수 없는가 |
+| 5 어떤 검색어든 응답의 모든 행은 제목에 그 검색어가 든 강의 | 정상 검색어 `보안`과 테스트 1~4의 검색어 4개 | API의 검색 응답이, 강의 전체 목록에서 제목에 검색어가 포함된 강의만 고른 결과와 같은지 | 기밀성. 공격자가 어떤 검색어를 보내도 강의 목록(`GET /courses`)에 없는 행을 읽을 수 없는가 |
 
-테스트 1~4는 SQL 인젝션에 쓰는 검색어를 하나씩 보내 API의 응답을 확인합니다. 테스트 5는 검색어가 무엇이든 성립해야 하는 조건을 확인합니다. 테스트 5는 `GET /courses`로 강의 전체 목록을 조회해 제목에 검색어가 든 강의만 고릅니다([`apps/api/test/courses.test.mjs` 90행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-fix-6/apps/api/test/courses.test.mjs#L90)). 그리고 검색 응답에 이 강의가 아닌 행이 없는지([91~92행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-fix-6/apps/api/test/courses.test.mjs#L91-L92)), 검색 응답의 건수가 고른 강의의 수와 같은지([93행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-fix-6/apps/api/test/courses.test.mjs#L93)) 확인합니다.
+테스트 1~4는 SQL 인젝션에 쓰는 검색어를 하나씩 보내 API의 응답을 확인합니다. 테스트 5는 검색어가 무엇이든 성립해야 하는 조건을 확인합니다. 테스트 5는 `GET /courses`로 강의 전체 목록을 조회해 제목에 검색어가 포함된 강의만 고릅니다([`apps/api/test/courses.test.mjs` 90행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-fix-6/apps/api/test/courses.test.mjs#L90)). 그리고 검색 응답에 이 강의가 아닌 행이 없는지([91~92행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-fix-6/apps/api/test/courses.test.mjs#L91-L92)), 검색 응답의 건수가 고른 강의의 수와 같은지([93행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-fix-6/apps/api/test/courses.test.mjs#L93)) 확인합니다.
 
 이 커밋에서 API 테스트는 99건 중 94건이 통과하고 5건이 실패합니다.
 
