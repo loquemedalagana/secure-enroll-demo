@@ -31,7 +31,7 @@ test('로그인 성공 → 200, 토큰의 uid가 그 사용자이고 응답은 �
   assert.equal(verifyToken(body.token, TOKEN_SECRET)?.uid, 'u1');
 });
 
-test('틀린 비밀번호와 없는 아이디 → 같은 401 응답', async () => {
+test('잘못 입력한 비밀번호와 존재하지 않는 아이디 → 같은 401 응답', async () => {
   const wrong = await login({ username: 'student1', password: 'student2-pass' });
   const unknown = await login({ username: 'nobody', password: 'student1-pass' });
   assert.equal(wrong.status, 401);
@@ -63,7 +63,7 @@ test('문자열이 아닌 값(객체, 배열, 숫자)은 400', async () => {
   }
 });
 
-test('상한보다 긴 값은 400이고, 오류 응답에 입력값이 되돌아오지 않음', async () => {
+test('상한보다 긴 값은 400이고, 오류 응답에 입력값이 들어 있지 않음', async () => {
   const secret = 'S3cret-value-that-must-not-echo';
   const res = await login({ username: 'student1', password: secret.repeat(10) });
   assert.equal(res.status, 400);
@@ -87,7 +87,7 @@ test('서버 출력에 비밀번호와 토큰 값이 없음', async () => {
 });
 
 // 결함 3(docs/v2-defects.md)을 잡는다. 위의 테스트는 받은 토큰을 다시 보내지 않아서 토큰 쪽을 확인하지 못한다.
-test('서버 출력에 요청으로 받은 토큰 값이 없음 (유효한 토큰, 틀린 토큰)', async () => {
+test('서버 출력에 요청으로 받은 토큰 값이 없음 (유효한 토큰, 유효하지 않은 토큰)', async () => {
   const valid = await tokenFor('student1');
   assert.equal((await me(`Bearer ${valid}`)).status, 200);
   // 검증에 실패한 토큰도 로그에 남으면 안 된다. 다른 테스트와 겹치지 않는 값을 쓴다.
@@ -117,7 +117,7 @@ async function assertUnauthorized(res, label) {
   assert.deepEqual(await res.json(), { error: 'unauthorized' }, label);
 }
 
-test('유효한 토큰 → 200, id와 역할을 돌려줌', async () => {
+test('유효한 토큰 → API는 200과 요청한 사람의 id, 역할로 응답함', async () => {
   const student = await me(`Bearer ${await tokenFor('student1')}`);
   assert.equal(student.status, 200);
   assert.deepEqual(await student.json(), { id: 'u1', role: 'student' });
@@ -149,7 +149,7 @@ test('만료된 토큰 → 401', async () => {
   assert.equal((await me(`Bearer ${issueToken('u1', TOKEN_SECRET)}`)).status, 200);
 });
 
-test('다른 키로 서명한 토큰, 없는 사용자의 토큰 → 401', async () => {
+test('다른 키로 서명한 토큰, 존재하지 않는 사용자의 토큰 → 401', async () => {
   await assertUnauthorized(await me(`Bearer ${issueToken('a1', 'attacker-chosen-secret-00000000000000')}`), '다른 키');
   await assertUnauthorized(await me(`Bearer ${issueToken('no-such-user', TOKEN_SECRET)}`), '없는 사용자');
 });
