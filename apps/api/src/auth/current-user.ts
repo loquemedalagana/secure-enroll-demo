@@ -10,7 +10,8 @@ export type AuthedRequest = Request & { user?: AuthUser; authz?: AuthzDecision }
 
 export const CurrentUser = createParamDecorator((_data: unknown, context: ExecutionContext): AuthUser => {
   const user = context.switchToHttp().getRequest<AuthedRequest>().user;
-  // 인증 Guard를 거치지 않은 경로에서 쓰면 여기서 멈춘다(500).
+  // 인증 Guard가 req.user = user를 실행하지 않는 공개 경로의 핸들러에서 CurrentUser를 쓰면,
+  // 아래 줄이 Error를 던지고 API는 500으로 응답한다.
   if (!user) throw new Error('CurrentUser를 인증되지 않은 경로에서 사용했습니다.');
   return user;
 });
