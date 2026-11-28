@@ -16,7 +16,7 @@ const cases = [
   ['비로그인 → 신청 조회', null, 'enrollment:read', mine, false],
   ['비로그인 → 관리자', null, 'admin:read', undefined, false],
   ['student → 본인 신청', student, 'enrollment:read', mine, true],
-  ['student → 타인 신청', student, 'enrollment:read', others, false],
+  ['student → 다른 사용자의 신청', student, 'enrollment:read', others, false],
   ['student → 리소스 없음', student, 'enrollment:read', undefined, false],
   ['student → 관리자', student, 'admin:read', undefined, false],
   ['instructor → 담당 강의 신청', instructor, 'enrollment:read', mine, true],
@@ -50,7 +50,7 @@ const cases = [
   // 신청 취소. 신청자와 관리자만.
   ['비로그인 → 신청 취소', null, 'enrollment:cancel', mine, false],
   ['student → 본인 신청 취소', student, 'enrollment:cancel', mine, true],
-  ['student → 타인 신청 취소', student, 'enrollment:cancel', others, false],
+  ['student → 다른 사용자의 신청 취소', student, 'enrollment:cancel', others, false],
   ['student → 신청 취소, 리소스 없음', student, 'enrollment:cancel', undefined, false],
   ['instructor → 담당 강의의 신청 취소(조회만 가능)', instructor, 'enrollment:cancel', mine, false],
   ['admin → 신청 취소', admin, 'enrollment:cancel', others, true],
