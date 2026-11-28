@@ -19,7 +19,8 @@ export class EnrollmentsController {
 
   // 신청을 받는다(신청 생성). 학생만 신청할 수 있고, 인가 Guard가 can()을 호출해 판단한다.
   // 정원이 찬 강의나 이미 신청한 강의를 신청하면 409로 응답한다.
-  // create()는 신청자를 request body에서 읽지 않고, 토큰의 사용자(user.id)로 정한다.
+  // 신청자의 id는 user.id다. user는 인증 Guard가 authenticate(token)으로 확인한 사용자이고,
+  // request body에는 신청자의 id를 받는 필드가 없다.
   @Post()
   @Authorize('enrollment:create')
   @Header('Cache-Control', 'no-store')
