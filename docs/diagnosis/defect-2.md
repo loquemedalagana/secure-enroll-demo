@@ -114,7 +114,7 @@ flowchart LR
   req2 --> q
   req3 --> q
   q -- "예" --> h1["강의 목록 핸들러"]
-  q -- "예" --> h2["수강생 명단 핸들러<br/>@Authorize는 붙어 있지만<br/>읽히지 않음"]
+  q -- "예" --> h2["수강생 명단 핸들러<br/>토큰 확인과 권한 확인을<br/>건너뛰고 실행됨"]
   g -. "401" .-> out1(["거부"])
   h1 --> ok(["200 · 강의 2건<br/>의도한 공개 경로"])
   h2 --> bad(["200 · 명단 2건<br/>전화번호 포함"])
@@ -343,7 +343,7 @@ flowchart TB
   subgraph A["방안 1 · Guard가 주소의 글자를 다시 비교"]
     direction LR
     a0(["GET /courses/"])
-    a1["서버가 주소를 해석<br/>끝의 / 는 무시"]
+    a1["서버<br/>'/courses/' 와 '/courses' 를<br/>같은 핸들러로 라우팅함"]
     a2["강의 목록 핸들러"]
     a3{{"Guard<br/>'/courses/' 와 '/courses' 가<br/>같은 글자인가"}}
     a4(["401"])
@@ -355,7 +355,7 @@ flowchart TB
   subgraph B["방안 2 · Guard가 핸들러에 붙은 표시를 읽음"]
     direction LR
     b0(["GET /courses/"])
-    b1["서버가 주소를 해석<br/>끝의 / 는 무시"]
+    b1["서버<br/>'/courses/' 와 '/courses' 를<br/>같은 핸들러로 라우팅함"]
     b2["강의 목록 핸들러<br/>@Public"]
     b3{{"Guard<br/>이 핸들러에<br/>@Public 이 있는가"}}
     b4(["200"])
