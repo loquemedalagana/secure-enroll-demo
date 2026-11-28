@@ -12,7 +12,7 @@ flowchart TD
   mw -- "세션 없음" --> unauth["API: 401<br/>페이지: /login으로 리다이렉트"]
   mw -- "세션 있음" --> pep["핸들러 · 페이지<br/>세션 재검증<br/>PEP · 시행"]
   pep -- "세션 없음" --> unauth
-  pep -- "세션 유효" --> pdp["apps/web/lib/policy.ts<br/>can() 판단<br/>PDP · 결정"]
+  pep -- "세션 유효" --> pdp["apps/web/lib/policy.ts<br/>can() 판단<br/>PE · 결정"]
   pdp -- "false" --> forbid["API: 403<br/>페이지: 안내 화면"]
   pdp -- "true" --> ok(["응답 200"])
 
@@ -28,6 +28,7 @@ flowchart TD
   class req neutral
 ```
 
+- 회색 상자는 클라이언트가 보낸 요청을 나타냅니다.
 - 파란색 상자는 요청을 처리하는 단계를 나타냅니다.
 - 빨간색 상자는 네트워크 정책이 허용되지 않은 출발지의 요청을 차단한 결과를 나타냅니다.
 - 주황색 상자는 앱이 요청을 거부한 응답을 나타냅니다.
@@ -48,7 +49,7 @@ flowchart TD
 | **PEP** (결정의 시행) | 각 진입점이 `getSession()`으로 재검증하고 `can()` 결과를 적용. API는 401/403, 페이지는 리다이렉트와 안내 화면. 미들웨어는 보조 | `apps/web/app/api/**`, `apps/web/app/admin`, `apps/web/app/enrollments`, `apps/web/middleware.ts` | 앱 프로세스 안에 있음. 네트워크 계층의 시행 지점은 `k8s/` 구성에만 있음(5절) |
 | 판단 입력(data sources) | 세션 클레임(`uid`, `role`)과 리소스 속성(`ownerId`, `instructorId`) | `apps/web/lib/session.ts`, `apps/web/lib/data.ts` | 리소스 속성은 호출 측이 채워서 `can()`에 넘김 |
 
-참고: 800-207 원문의 논리 구성요소는 PE·PA·PEP 셋이고, 판단 입력은 "데이터 소스"로 부릅니다. PIP는 XACML 쪽 명칭이라 위 표에서는 풀어 썼습니다.
+참고: 800-207 원문의 논리 구성요소는 PE·PA·PEP 셋이고, 판단 입력은 "데이터 소스"로 부릅니다. PIP는 XACML 쪽 명칭이라 위 표에서는 풀어 썼습니다. 800-207의 3절은 PE와 PA를 묶어 PDP라고 부릅니다. 이 문서의 제목과 5절은 `can()`을 PDP라고 적는데, `can()`은 PDP 가운데 PE에 해당합니다.
 
 ### 판단 입력: RBAC와 ABAC 속성
 
