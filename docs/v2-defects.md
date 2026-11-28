@@ -116,7 +116,7 @@ git checkout v2-defect-N                  # 결함 상태 재현
 - **분류**: A01 Broken Access Control / CWE-352 (CSRF)
 - **어떻게 생기는가**: 웹에 신청 취소를 `GET /api/enrollments/:id/cancel`로 만듭니다. 쿠키가 `SameSite=Lax`여도 브라우저는 다른 사이트에서 시작된 최상위 GET 이동에는 쿠키를 붙입니다.
 - **왜 위험한가**: 로그인한 사용자가 다른 사이트의 링크를 누르거나 그 사이트가 페이지를 이동시키면, 사용자가 의도하지 않은 취소가 그 사용자의 권한으로 실행됩니다.
-- **수정 방향**: 웹은 상태를 변경하는 요청을 POST와 DELETE로만 받습니다. 로그인 경로에 있는 요청 형식·출처 검사를 공통 함수로 빼서 신청을 취소하는 경로(`DELETE /api/enrollments/:id`)에도 적용합니다.
+- **수정 방향**: 웹은 상태를 변경하는 요청을 POST와 DELETE로만 받습니다. 로그인 경로에 있는 CSRF 방어(`Content-Type` 헤더와 `Origin` 헤더 확인)를 공통 함수로 옮겨 신청을 취소하는 경로(`DELETE /api/enrollments/:id`)에도 적용합니다.
 - **검증 테스트**: `GET /api/enrollments/e1/cancel` → 404 또는 405(구현할 때 정합니다), 본인의 `DELETE /api/enrollments/e1` → 204, 다른 출처에서 온 DELETE → 403.
 - **브랜치**: `v2/09-web-enroll`
 - **API와의 관계**: API는 쿠키가 아니라 `Authorization` 헤더의 토큰으로 인증합니다. 브라우저가 이 헤더를 자동으로 붙이지 않으므로 이 결함은 쿠키를 쓰는 웹 계층에서 다룹니다.
