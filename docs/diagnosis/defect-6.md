@@ -322,7 +322,7 @@ this.prisma.$queryRaw`… ILIKE ${`%${q}%`} …`       // 방안 2: 쿼리의 �
 
 #### 실제로 바꿔 본 결과
 
-세 방안을, 결함을 잡는 테스트를 추가한 뒤의 코드에 하나씩 적용해 결과를 비교했습니다. 방안을 하나 적용할 때마다 `npm test`로 API 테스트를 실행하고 재현 스크립트를 실행했습니다. 세 방안의 변경은 커밋하지 않았습니다. API가 DB에 보낸 쿼리는 PostgreSQL의 로그로 확인했습니다. 이 확인에 쓴 API의 DB 연결에만 `log_statement=all`을 설정했습니다.
+세 방안을, 결함을 잡는 테스트를 추가한 커밋([`d8eb300`](https://github.com/loquemedalagana/secure-enroll-demo/commit/d8eb300))의 코드에 하나씩 적용해 결과를 비교했습니다. 방안을 하나 적용할 때마다 `npm test`로 API 테스트를 실행하고 재현 스크립트를 실행했습니다. 세 방안의 변경은 커밋하지 않았습니다. API가 DB에 보낸 쿼리는 PostgreSQL의 로그로 확인했습니다. 이 확인에 쓴 API의 DB 연결에만 `log_statement=all`을 설정했습니다.
 
 방안 1:
 
