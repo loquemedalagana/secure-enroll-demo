@@ -466,11 +466,11 @@ node .github/scripts/defects/defect-8.mjs --expect blocked
 
 | 시점 | 커밋 | `api` 잡 | 실행 |
 |---|---|---|---|
-| 결함이 든 구현을 올린 뒤 | `519a086` | 통과 (128건. 결함을 잡는 테스트가 없었음) | [45971418187](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45971418187) |
+| 결함이 있는 코드를 푸시한 뒤 | `519a086` | 통과 (128건. 결함을 잡는 테스트가 없었음) | [45971418187](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45971418187) |
 | 테스트를 추가한 뒤 | `7e6ea30` | 실패 (131건 중 3건) | [45973489880](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45973489880) |
 | 수정한 뒤 | `3067506` | 통과 (132건) | [45978284047](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45978284047) |
 
-첫째 줄은 결함이 든 구현 커밋과 그 뒤의 문서 커밋들을 함께 올린 뒤에 실행된 기록입니다. 둘째 줄은 테스트를 올린 뒤의 두 번째 실행 기록이고, 이 실행의 Summary에는 실패한 이유가 함께 나옵니다. 첫 번째 실행([45972981182](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45972981182))에서도 같은 3건이 실패했습니다. 셋째 줄은 수정 커밋과 문서 커밋을 함께 올린 뒤에 실행된 기록입니다.
+첫째 줄은 결함이 있는 코드를 추가한 커밋과 그 뒤의 문서 커밋들을 함께 푸시한 뒤에 실행된 CI 기록입니다. 둘째 줄은 테스트를 올린 뒤의 두 번째 실행 기록이고, 이 실행의 Summary에는 실패한 이유가 함께 나옵니다. 첫 번째 실행([45972981182](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45972981182))에서도 같은 3건이 실패했습니다. 셋째 줄은 수정 커밋과 문서 커밋을 함께 올린 뒤에 실행된 기록입니다.
 
 실행 로그는 GitHub의 보존 기간(기본 90일)이 지나면 삭제됩니다. `defects.yml`은 실행할 때마다 결함 태그와 수정 태그를 다시 테스트하므로, 위 표의 실패와 통과를 언제든 재현할 수 있습니다.
 

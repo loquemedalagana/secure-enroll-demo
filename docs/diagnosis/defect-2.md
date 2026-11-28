@@ -484,7 +484,7 @@ node .github/scripts/defects/defect-2.mjs --expect blocked
 
 | 시점 | 커밋 | `api` 잡 | 실행 |
 |---|---|---|---|
-| 결함이 든 구현을 올린 뒤 | `4fc176d` | 실패 (71건 중 1건, 결함 1의 테스트) | [45767152542](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45767152542) |
+| 결함이 있는 코드를 푸시한 뒤 | `4fc176d` | 실패 (71건 중 1건, 결함 1의 테스트) | [45767152542](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45767152542) |
 | 테스트를 추가한 뒤 | `410813e` | 실패 (76건 중 6건) | [45768924998](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45768924998) |
 | 수정한 뒤 | `5d826a6` | 통과 (76건) | [45776323334](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45776323334) |
 

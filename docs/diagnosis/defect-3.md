@@ -419,7 +419,7 @@ node .github/scripts/defects/defect-3.mjs /tmp/api.log --expect blocked
 
 | 시점 | 커밋 | `api` 잡 | 실행 |
 |---|---|---|---|
-| 결함이 든 구현을 올린 뒤 | `78e3752` | 실패 (86건 중 1건, 3.3절의 테스트) | [45789306932](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45789306932) |
+| 결함이 있는 코드를 푸시한 뒤 | `78e3752` | 실패 (86건 중 1건, 3.3절의 테스트) | [45789306932](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45789306932) |
 | 테스트를 추가한 뒤 | `223a7e4` | 실패 (87건 중 2건) | [45791174560](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45791174560) |
 | 수정한 뒤 | `2502f20` | 통과 (87건) | [45796468140](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45796468140) |
 

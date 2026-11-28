@@ -563,7 +563,7 @@ node .github/scripts/defects/defect-6.mjs --expect blocked
 
 | 시점 | 커밋 | `api` 잡 | 실행 |
 |---|---|---|---|
-| 결함이 든 구현을 올린 뒤 | `5997a97` | 통과 (94건. 결함을 잡는 테스트가 없었음) | [45934744786](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45934744786) |
+| 결함이 있는 코드를 푸시한 뒤 | `5997a97` | 통과 (94건. 결함을 잡는 테스트가 없었음) | [45934744786](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45934744786) |
 | 테스트를 추가한 뒤 | `abc8eb0` | 실패 (99건 중 5건) | [45940574333](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45940574333) |
 | 수정한 뒤 | `159648f` | 통과 (99건) | [45948629507](https://github.com/loquemedalagana/secure-enroll-demo/actions/runs/45948629507) |
 
