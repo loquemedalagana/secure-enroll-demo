@@ -14,7 +14,7 @@ function signed(payload) {
   return `${body}.${createHmac('sha256', SECRET).update(body).digest('base64url')}`;
 }
 
-test('발급한 토큰은 검증을 통과하고 uid와 만료 시각(1시간 뒤)을 돌려줌', () => {
+test('발급한 토큰은 검증을 통과하고, verifyToken은 uid와 만료 시각(1시간 뒤)을 반환함', () => {
   const token = issueToken('u1', SECRET, NOW);
   assert.deepEqual(verifyToken(token, SECRET, NOW), { uid: 'u1', exp: NOW_SECONDS + TOKEN_TTL_SECONDS });
   assert.equal(TOKEN_TTL_SECONDS, 3600);
