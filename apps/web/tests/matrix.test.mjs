@@ -75,7 +75,7 @@ test('admin → 관리자 API 200', async () => {
 test('student → 본인 신청 200', async () => {
   assert.equal((await get('/api/enrollments/e1', await login('student1'))).status, 200);
 });
-test('student → 타인 신청 403', async () => {
+test('student → 다른 사용자의 신청 403', async () => {
   assert.equal((await get('/api/enrollments/e2', await login('student1'))).status, 403);
 });
 test('instructor → 담당 강의 수강 신청 200', async () => {
@@ -85,6 +85,6 @@ test('instructor → 다른 강사 강의 수강 신청 403', async () => {
   // e3 = 강의 c2(instructor2 소속). instructor1은 접근 불가여야 함
   assert.equal((await get('/api/enrollments/e3', await login('instructor1'))).status, 403);
 });
-test('admin → 타인 신청 200', async () => {
+test('admin → 다른 사용자의 신청 200', async () => {
   assert.equal((await get('/api/enrollments/e2', await login('admin1'))).status, 200);
 });
