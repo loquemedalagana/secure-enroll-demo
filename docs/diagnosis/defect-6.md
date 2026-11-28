@@ -124,8 +124,8 @@ flowchart LR
   req(["GET /courses<br/>?q=검색어<br/>토큰 없음"])
 
   subgraph api["API"]
-    g["인증·인가 Guard<br/>@Public이라 통과"]
-    s["강의 검색<br/>검색어를 쿼리에<br/>이어 붙임"]
+    g["인증·인가 Guard<br/>공개 경로의 요청을<br/>통과시킴"]
+    s["강의 검색<br/>검색어를 SQL 문자열에<br/>이어 붙임"]
   end
 
   subgraph db["PostgreSQL"]
@@ -136,8 +136,8 @@ flowchart LR
 
   req --> g --> s
   s -- "제목 검색" --> c
-  s -- "검색어에 든<br/>UNION SELECT" --> u
-  s -- "검색어에 든<br/>UNION SELECT" --> e
+  s -- "검색어에 포함된<br/>UNION SELECT" --> u
+  s -- "검색어에 포함된<br/>UNION SELECT" --> e
   s --> res(["200 · 강의 목록과<br/>같은 모양의 응답"])
 
   classDef safe fill:#E1F5EE,stroke:#0F6E56,color:#04342C
@@ -201,11 +201,11 @@ flowchart LR
   s == "전화번호" ==> e
   s --> res
 
-  t1["테스트 1<br/>따옴표가 든<br/>검색어에 오류가<br/>나지 않는가"] -.- s
-  u -.- t3["테스트 3<br/>사용자 테이블을<br/>읽지 못하는가"]
-  c -.- t2["테스트 2<br/>검색어가 조건을<br/>바꾸지 못하는가"]
-  e -.- t4["테스트 4<br/>신청 테이블을<br/>읽지 못하는가"]
-  res -.- t5["테스트 5<br/>모든 행이 검색어가<br/>든 강의인가"]
+  t1["테스트 1<br/>검색어의 작은따옴표가<br/>SQL 문법 오류를<br/>일으키지 않는가"] -.- s
+  u -.- t3["테스트 3<br/>검색어로 사용자 테이블을<br/>읽을 수 없는가"]
+  c -.- t2["테스트 2<br/>검색어가 조건을<br/>항상 참으로<br/>바꾸지 못하는가"]
+  e -.- t4["테스트 4<br/>검색어로 신청 테이블을<br/>읽을 수 없는가"]
+  res -.- t5["테스트 5<br/>응답의 모든 행이<br/>제목에 검색어가<br/>포함된 강의인가"]
 
   classDef danger fill:#FCEBEB,stroke:#A32D2D,color:#501313
   classDef safe fill:#E1F5EE,stroke:#0F6E56,color:#04342C
@@ -469,7 +469,7 @@ flowchart LR
   req(["GET /courses<br/>?q=검색어<br/>토큰 없음"])
 
   subgraph api["API"]
-    g["인증·인가 Guard<br/>@Public이라 통과"]
+    g["인증·인가 Guard<br/>공개 경로의 요청을<br/>통과시킴"]
     s["강의 검색<br/>쿼리와 검색어를<br/>따로 넘김"]
   end
 
