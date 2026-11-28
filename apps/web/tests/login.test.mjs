@@ -1,4 +1,4 @@
-// 로그인 요청 출처 제한 테스트 (HTTP 수준): 로그인 CSRF 회귀 방지
+// 로그인 CSRF 방어 테스트. 웹 앱을 띄우고 HTTP 요청을 보낸다(앱 계층, L7).
 // 실행 전: npm ci && npm run build
 // 인가 결함과 무관한 인증 기반이라 vulnerable·fixed 모두 통과해야 한다.
 import { test, before, after } from 'node:test';

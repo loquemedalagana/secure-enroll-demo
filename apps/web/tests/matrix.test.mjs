@@ -1,4 +1,4 @@
-// 권한 매트릭스 테스트 (HTTP 수준)
+// 권한 매트릭스 테스트. 웹 앱을 띄우고 HTTP 요청을 보낸다(앱 계층, L7).
 // 실행 전: npm ci && npm run build
 // 기대 결과: vulnerable 브랜치에서는 일부 실패(= 인가 결함의 증거), fixed 브랜치에서는 전부 통과.
 import { test, before, after } from 'node:test';
