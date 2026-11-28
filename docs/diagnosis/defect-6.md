@@ -280,16 +280,16 @@ SQL 인젝션은 ①에서 일어납니다. 검색어가 SQL 문자열에 들어
 ```mermaid
 flowchart LR
   subgraph one["결함 상태, 방안 1"]
-    a1["API<br/>쿼리에 검색어를<br/>넣어 문자열 하나로"]
-    p1["① 구문 분석<br/>검색어도 함께 읽어<br/>구조를 정함"]
+    a1["API<br/>쿼리와 검색어를<br/>문자열 하나로 만들어 보냄"]
+    p1["① 구문 분석<br/>DB가 검색어도 함께 읽어<br/>구조를 정함"]
     e1["② 실행"]
     a1 -- "쿼리 + 검색어" --> p1 --> e1
   end
 
   subgraph two["방안 2, 방안 3"]
     a2["API<br/>쿼리와 검색어를<br/>따로 보냄"]
-    p2["① 구문 분석<br/>쿼리만 읽어<br/>구조를 정함"]
-    e2["② 실행<br/>검색어는 값으로만<br/>쓰임"]
+    p2["① 구문 분석<br/>DB가 쿼리만 읽어<br/>구조를 정함"]
+    e2["② 실행<br/>DB가 검색어를<br/>값으로만 씀"]
     a2 -- "쿼리 (플레이스홀더 $1)" --> p2 --> e2
     a2 -- "검색어" --> e2
   end
@@ -470,7 +470,7 @@ flowchart LR
 
   subgraph api["API"]
     g["인증·인가 Guard<br/>공개 경로의 요청을<br/>통과시킴"]
-    s["강의 검색<br/>쿼리와 검색어를<br/>따로 넘김"]
+    s["강의 검색<br/>쿼리와 검색어를<br/>따로 보냄"]
   end
 
   subgraph db["PostgreSQL"]
@@ -481,7 +481,7 @@ flowchart LR
 
   req --> g --> s
   s -- "쿼리: … ILIKE $1<br/>값: 검색어" --> c
-  s --> res(["200 · 검색어가<br/>든 강의만"])
+  s --> res(["200 · 제목에 검색어가<br/>포함된 강의만"])
 
   classDef safe fill:#E1F5EE,stroke:#0F6E56,color:#04342C
   classDef neutral fill:#f6f8fa,stroke:#57606a,color:#24292f
