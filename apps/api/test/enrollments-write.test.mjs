@@ -155,7 +155,7 @@ test('중복: 같은 학생이 같은 강의를 동시에 4번 신청하면 1건
 });
 
 test('신청 생성: request body에 userId를 넣으면 본인의 id여도 400', async () => {
-  // 신청 생성의 DTO에는 userId가 없다. 전역 ValidationPipe가 선언하지 않은 필드가 든 이 요청을 400으로 거부한다.
+  // 신청 생성의 DTO에는 userId가 없다. 전역 ValidationPipe가 선언하지 않은 필드가 포함된 이 요청을 400으로 거부한다.
   const res = await enroll('student3', 'c4', { userId: 'u3' });
   assert.equal(res.status, 400);
   assert.equal((await res.json()).error, 'bad_request');

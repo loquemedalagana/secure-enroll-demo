@@ -43,7 +43,7 @@ for (const [path, ...expected] of MATRIX) {
   });
 }
 
-test('권한 표: 사용자마다 신청 목록에 든 신청과 한 건 조회가 허용되는 신청이 같음', async () => {
+test('권한 표: 사용자마다 신청 목록에 포함된 신청과 한 건 조회가 허용되는 신청이 같음', async () => {
   // 목록의 범위(enrollmentScope)와 한 건의 판단(can)은 코드가 따로다. 둘이 어긋나지 않는지 본다.
   for (const who of WHO.slice(1)) {
     const listed = (await (await get('/enrollments', who)).json()).map((e) => e.id).sort();
