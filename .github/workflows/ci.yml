@@ -44,7 +44,8 @@ jobs:
       - if: always()
         run: node ../../.github/scripts/test-summary.mjs "웹 테스트" "$RUNNER_TEMP/test-output.txt"
 
-  # API(Nest.js): 러너 안의 PostgreSQL에 마이그레이션과 시드를 적용하고 HTTP 수준 테스트를 돌린다.
+  # API(Nest.js): 러너 안의 PostgreSQL에 마이그레이션과 시드를 적용한다.
+  # 그 뒤 API를 띄우고 HTTP 요청을 보내는 테스트를 실행한다(앱 계층, L7).
   api:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
