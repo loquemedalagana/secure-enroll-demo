@@ -47,8 +47,9 @@ flowchart LR
   style netpol fill:#ffffff,stroke:#57606a,color:#24292f
 ```
 
-네 잡은 서로 기다리지 않고 따로 실행됩니다. `audit` 잡은 `apps/web`과 `apps/api`에 한 번씩 실행됩니다.
+GitHub Actions는 `web`, `api`, `audit`, `netpol` 잡을 서로 기다리지 않고 따로 실행합니다. GitHub Actions는 `audit` 잡을 `apps/web`과 `apps/api`에 한 번씩 실행합니다.
 
+- 회색 상자는 CI를 시작하는 이벤트(`main`의 push와 pull request)를 나타냅니다.
 - 파란색 상자는 웹과 API를 빌드하고 테스트하는 단계를 나타냅니다.
 - 주황색 상자는 의존성을 확인하는 단계를 나타냅니다.
 - 초록색 상자는 네트워크 정책을 확인하는 단계를 나타냅니다.
