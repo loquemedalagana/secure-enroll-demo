@@ -1,28 +1,28 @@
-# 결함 6 진단 보고서: 강의 검색의 검색어가 쿼리로 실행됨
+# 결함 6 진단 보고서: 강의 검색의 SQL 인젝션 (검색어를 SQL 문자열에 이어 붙임)
 
 | 항목 | 내용 |
 |---|---|
 | 대상 | 태그 `v2-defect-6`의 코드로 로컬에서 띄운 API (`http://127.0.0.1:4000`) |
-| 경로 | `GET /courses?q=` (로그인 없이 열리는 경로) |
+| 경로 | `GET /courses?q=` (공개 경로) |
 | 분류 | OWASP Top 10 2025 A05 Injection / CWE-89 (SQL 인젝션) |
 | 위험도 | 높음 |
-| 해당 구성 요소 | 객체. 시행 지점(PEP)은 강의 목록을 열어 준 것인데, 검색어가 쿼리를 바꿔 다른 객체(사용자, 신청)를 읽습니다 |
+| 해당 구성 요소 | 객체. 강의 검색이 읽어야 하는 테이블은 `courses`뿐입니다. 결함 상태에서는 공격자가 검색어에 넣은 SQL로 다른 객체(사용자 테이블, 신청 테이블)까지 읽을 수 있습니다. 시행 지점(PEP)인 Guard는 정상으로 동작합니다 |
 | 상태 | 조치 완료 (`v2-fix-6`) |
 
 ## 1. 요약
 
-강의 검색이 검색어를 SQL 문자열에 이어 붙여 실행합니다. 검색어에 작은따옴표를 넣으면 그 뒤의 글자가 값이 아니라 쿼리의 일부로 실행됩니다. 이 경로는 로그인 없이 열려 있어서, 토큰 없이 요청 한 번으로 사용자 테이블의 계정 이름과 비밀번호 해시, 신청 테이블의 전화번호를 읽을 수 있습니다.
+강의 검색(`GET /courses?q=`)은 검색어를 SQL 문자열에 이어 붙여 실행합니다. 검색어에 작은따옴표가 들어 있으면 DB는 그 작은따옴표 뒤의 글자를 값이 아니라 쿼리의 일부로 실행합니다. 강의 검색은 공개 경로입니다. 그래서 공격자는 토큰 없이 테이블마다 요청 한 번으로 사용자 테이블의 계정 이름과 비밀번호 해시, 신청 테이블의 전화번호를 읽을 수 있습니다.
 
 위험도를 높음으로 본 근거입니다.
 
 | | 근거 |
 |---|---|
-| 높이는 쪽 | 로그인이 필요 없습니다. 주소를 아는 누구나 보낼 수 있습니다 |
-| 높이는 쪽 | 요청 한 번으로 테이블 전체가 나옵니다. 계정 5개의 비밀번호 해시와 신청 3건의 전화번호가 한 응답에 들어 있습니다 |
-| 높이는 쪽 | 응답이 정상(200)이고 강의 목록과 같은 모양이라, 상태 코드만으로는 공격인지 알 수 없습니다 |
-| 높이는 쪽 | API가 DB에 접속하는 계정이 모든 테이블을 읽을 수 있습니다. 검색에 필요한 것은 `courses`뿐입니다 |
-| 낮추는 쪽 | 비밀번호는 원문이 아니라 scrypt 해시입니다. 원문을 얻으려면 해시마다 따로 대입해야 합니다 |
-| 낮추는 쪽 | 이 보고서가 확인한 것은 읽기입니다. 쓰기와 삭제는 확인하지 않았습니다 |
+| 높이는 쪽 | 인증이 필요 없습니다. 강의 검색은 공개 경로입니다 |
+| 높이는 쪽 | 공격자는 요청 한 번으로 테이블 하나의 모든 행을 읽을 수 있습니다. 2절에서 사용자 테이블을 읽은 요청의 응답에는 계정 5개의 비밀번호 해시가, 신청 테이블을 읽은 요청의 응답에는 신청 3건의 전화번호가 들어 있습니다 |
+| 높이는 쪽 | API는 이 요청에 200으로 응답하고, 응답의 필드(`id`, `title`)도 강의 목록과 같습니다. 그래서 상태 코드와 필드 이름만으로는 공격인지 알 수 없습니다 |
+| 높이는 쪽 | API가 DB에 접속하는 계정이 모든 테이블을 읽을 수 있습니다. 강의 검색에 필요한 테이블은 `courses`뿐입니다 |
+| 낮추는 쪽 | 응답에 든 비밀번호는 원문이 아니라 scrypt 해시입니다. 공격자가 원문을 알아내려면 해시마다 따로 비밀번호를 대입해야 합니다 |
+| 낮추는 쪽 | 이 보고서는 공격자가 검색어로 다른 테이블을 읽을 수 있다는 것(기밀성 침해)만 확인했습니다. 검색어로 데이터를 변경하거나 삭제할 수 있는지는 확인하지 않았습니다 |
 
 ## 2. 재현 절차
 
@@ -39,7 +39,7 @@ npm run db:migrate && npm run db:seed
 npm start
 ```
 
-요청 1 (기대한 동작: 제목에 "보안"이 든 강의):
+요청 1 (정상 검색어 `보안`):
 
 ```bash
 curl -s -G --data-urlencode "q=보안" http://127.0.0.1:4000/courses
@@ -48,6 +48,8 @@ curl -s -G --data-urlencode "q=보안" http://127.0.0.1:4000/courses
 ```json
 [{"id":"c1","title":"웹 보안 입문"}]
 ```
+
+API는 제목에 "보안"이 든 강의 1건으로 응답합니다. 이 응답은 의도한 동작입니다.
 
 요청 2 (작은따옴표 하나):
 
@@ -59,23 +61,23 @@ curl -s -G --data-urlencode "q='" http://127.0.0.1:4000/courses
 {"error":"internal_error"}
 ```
 
-500입니다. 검색어의 따옴표가 쿼리의 문자열을 닫아서 문법 오류가 났습니다. 검색어가 값으로 다뤄졌다면 0건이 나와야 합니다.
+API는 500으로 응답합니다. DB는 검색어의 작은따옴표를 문자열 리터럴의 끝으로 읽습니다. 코드가 검색어 뒤에 붙인 `%'`의 작은따옴표는 짝이 없어서 SQL 문법 오류가 납니다. 결함이 없다면 DB는 작은따옴표를 검색할 글자로 읽고, API는 200과 빈 배열(`[]`)로 응답해야 합니다.
 
-요청 3 (조건을 항상 참으로):
+요청 3 (조건을 항상 참으로 만드는 검색어, tautology 기반):
 
 ```bash
 curl -s -G --data-urlencode "q=암호학' OR '%'='" http://127.0.0.1:4000/courses
 ```
 
-`암호학`으로 검색했는데 강의 2건이 모두 나옵니다.
+제목에 "암호학"이 든 강의는 없습니다. 그런데 API는 강의 2건이 모두 든 목록으로 응답합니다.
 
-요청 4 (사용자 테이블을 합침):
+요청 4 (사용자 테이블의 행을 검색 결과에 합치는 검색어, UNION 기반):
 
 ```bash
 curl -s -G --data-urlencode "q=암호학' UNION SELECT username, \"passwordHash\" FROM users --" http://127.0.0.1:4000/courses
 ```
 
-토큰 없이 200이고 5건입니다(해시는 이 문서에서 가렸습니다).
+API는 토큰 없는 이 요청에 200으로 응답하고, 응답에는 5건이 들어 있습니다(비밀번호 해시는 이 문서에서 가렸습니다).
 
 ```json
 [
@@ -87,7 +89,7 @@ curl -s -G --data-urlencode "q=암호학' UNION SELECT username, \"passwordHash\
 ]
 ```
 
-강의의 `id` 자리에 계정 이름이, `title` 자리에 비밀번호 해시가 들어 있습니다. `FROM enrollments`로 바꿔 `id, phone`을 고르면 신청 3건의 전화번호가 같은 방식으로 나옵니다.
+응답의 `id` 필드에는 계정 이름이, `title` 필드에는 비밀번호 해시가 들어 있습니다. 검색어의 `UNION SELECT` 뒤를 `id, phone FROM enrollments --`로 바꿔 요청하면, API는 신청 3건의 신청 id와 전화번호로 응답합니다.
 
 재현 스크립트 (`main`의 스크립트를 결함 상태의 API에 실행):
 
@@ -111,11 +113,11 @@ node .github/scripts/defects/defect-6.mjs
 판정: 취약
 ```
 
-스크립트는 응답의 값을 출력하지 않고 건수만 셉니다. 결함이 없다면 API는 다섯 요청 모두에 200으로 응답해야 하고, 응답의 강의 목록은 0건이어야 합니다. 다섯 검색어 모두 그대로 제목에 들어 있는 강의가 없기 때문입니다.
+스크립트는 응답에 든 값을 출력하지 않고 건수만 출력합니다. 결함이 없다면 API는 다섯 요청 모두에 200과 빈 배열(`[]`)로 응답해야 합니다. 강의 2건의 제목(`웹 보안 입문`, `시큐어 코딩 실습`)에는 다섯 검색어 중 어느 것도 글자 그대로 들어 있지 않기 때문입니다.
 
 ## 3. 원인
 
-검색어가 SQL 문자열 안에 들어간 뒤에 DB로 넘어갑니다. DB는 어디까지가 원래 쿼리이고 어디부터가 검색어인지 구분할 수 없습니다.
+API는 검색어를 SQL 문자열에 이어 붙여 문자열 하나로 만든 뒤 DB에 보냅니다. DB는 이 문자열 하나를 구문 분석하므로, 어디까지가 코드에 적힌 쿼리이고 어디부터가 검색어인지 구분할 수 없습니다.
 
 ```mermaid
 flowchart LR
@@ -151,31 +153,31 @@ flowchart LR
 - 빨간색 화살표는 검색어에 든 `UNION SELECT`가 `users` 테이블과 `enrollments` 테이블을 읽는 흐름을 나타냅니다.
 - 초록색 상자는 정상으로 동작하는 Guard와, 강의 검색이 읽는 `courses` 테이블을 나타냅니다.
 
-Guard는 강의 목록을 로그인 없이 열어 준 것이고, 그 판단은 맞습니다.
+강의 목록은 의도한 공개 경로입니다. 강의 목록 핸들러에 `@Public()`이 붙어 있어서([`courses/courses.controller.ts` 12행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-6/apps/api/src/courses/courses.controller.ts#L12)), Guard는 토큰 확인을 건너뛰고 요청을 통과시킵니다. Guard의 이 동작은 정상입니다.
 
 ### 3.1 원인 코드
 
-- 검색어 `q`를 템플릿 문자열로 쿼리에 넣고 `$queryRawUnsafe`로 실행합니다: [`courses/courses.service.ts` 17~21행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-6/apps/api/src/courses/courses.service.ts#L17-L21).
-- 컨트롤러는 받은 `q`를 그대로 넘깁니다: [`courses/courses.controller.ts` 15행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-6/apps/api/src/courses/courses.controller.ts#L15).
+- `search()`는 템플릿 문자열의 `'%${q}%'`로 검색어 `q`를 SQL 문자열에 넣고(19행), 이 문자열을 `$queryRawUnsafe`로 실행합니다(18행): [`courses/courses.service.ts` 17~21행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-6/apps/api/src/courses/courses.service.ts#L17-L21).
+- 강의 목록 핸들러 `list()`는 주소의 쿼리 문자열에서 읽은 `q`를 `this.courses.search(q)`에 그대로 넘깁니다: [`courses/courses.controller.ts` 15행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-6/apps/api/src/courses/courses.controller.ts#L15).
 
 ### 3.2 검색어에 따라 실행되는 쿼리
 
-코드가 만드는 쿼리는 `… WHERE title ILIKE '%` + 검색어 + `%' ORDER BY id ASC`입니다. 굵은 부분이 검색어입니다.
+19행의 코드가 만드는 쿼리는 `… WHERE title ILIKE '%` + 검색어 + `%' ORDER BY id ASC`입니다. 아래 표에서 굵은 부분이 검색어입니다.
 
 | 검색어 | 실행되는 쿼리의 조건 부분 | 결과 |
 |---|---|---|
-| `보안` | `title ILIKE '%`**`보안`**`%' ORDER BY …` | 기대한 동작 |
-| `'` | `title ILIKE '%`**`'`**`%' ORDER BY …` | 문자열이 먼저 닫혀 문법 오류 (500) |
-| `암호학' OR '%'='` | `title ILIKE '%`**`암호학' OR '%'='`**`%' ORDER BY …` | `'%'='%'`가 참이라 모든 강의 |
-| `암호학' UNION SELECT username, "passwordHash" FROM users --` | `title ILIKE '%`**`암호학' UNION SELECT … FROM users --`**`%' ORDER BY …` | `--` 뒤는 주석이 되고, 사용자 테이블이 합쳐짐 |
+| `보안` | `title ILIKE '%`**`보안`**`%' ORDER BY …` | API는 제목에 "보안"이 든 강의 1건으로 응답합니다. 의도한 동작입니다 |
+| `'` | `title ILIKE '%`**`'`**`%' ORDER BY …` | DB가 검색어의 `'`를 문자열 리터럴의 끝으로 읽습니다. 뒤에 남은 `'`는 짝이 없어서 문법 오류가 나고, API는 500으로 응답합니다 |
+| `암호학' OR '%'='` | `title ILIKE '%`**`암호학' OR '%'='`**`%' ORDER BY …` | `'%'='%'`가 항상 참이어서 API는 모든 강의로 응답합니다 (tautology 기반) |
+| `암호학' UNION SELECT username, "passwordHash" FROM users --` | `title ILIKE '%`**`암호학' UNION SELECT … FROM users --`**`%' ORDER BY …` | DB는 `--` 뒤를 주석으로 읽고, 사용자 테이블의 행을 검색 결과에 합칩니다 (UNION 기반) |
 
 ### 3.3 이 결함을 처음 잡은 테스트
 
-없습니다. 이 태그에서 API 테스트 94건이 모두 통과합니다. 검색 테스트 2건은 제목에 들어 있는 말, 없는 말, 빈 검색어만 보냅니다.
+결함 태그(`v2-defect-6`)에는 이 결함을 잡는 테스트가 없습니다. 이 태그에서 API 테스트 94건이 모두 통과합니다. 강의 검색 테스트 2건([`apps/api/test/courses.test.mjs` 30~39행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-6/apps/api/test/courses.test.mjs#L30-L39))은 검색어로 `보안`, `실습`, `없는 제목`, 빈 문자열만 보냅니다.
 
 ### 3.4 결함을 잡는 테스트
 
-`apps/api/test/courses.test.mjs`에 "강의 검색 1~5"를 추가했습니다. 테스트는 웹을 거치지 않고 띄워 놓은 API에 직접 요청하고, API는 실제 PostgreSQL에 연결되어 있습니다. DB를 흉내 내면 쿼리가 실제로 구문 분석되지 않아서 이 취약점이 드러나지 않습니다.
+`apps/api/test/courses.test.mjs`에 테스트 5건("강의 검색 1~5")을 추가했습니다([`d8eb300`](https://github.com/loquemedalagana/secure-enroll-demo/commit/d8eb300)). 테스트는 API를 띄운 뒤 웹을 거치지 않고 API에 직접 요청합니다. API는 실제 PostgreSQL에 접속합니다. PostgreSQL을 mock으로 바꾸면 DB가 쿼리를 구문 분석하지 않아서, 테스트가 이 결함을 잡지 못합니다.
 
 ```mermaid
 flowchart LR
@@ -223,13 +225,13 @@ flowchart LR
 
 | 테스트 | 보내는 검색어 | 개발 관점: 무엇을 확인하나 | 보안 관점: 무엇을 지키나 |
 |---|---|---|---|
-| 1 작은따옴표가 든 검색어도 오류 없이 200에 0건 | `'` | 특수문자가 든 검색어가 500을 내지 않는지 | 검색어가 쿼리의 문법을 깨지 못합니다. 오류 응답은 쿼리가 바뀐다는 것을 알려 주는 첫 신호입니다 |
-| 2 검색어로 조건을 항상 참으로 만들 수 없음 | `암호학' OR '%'='` | 결과가 0건인지 | 검색어가 조건을 바꾸지 못합니다 |
-| 3 검색어로 사용자 테이블을 읽을 수 없음 | `… UNION SELECT … FROM users --` | 응답이 0건인지 | 객체의 범위. 계정 이름과 비밀번호 해시 |
-| 4 검색어로 신청 테이블을 읽을 수 없음 | `… UNION SELECT … FROM enrollments --` | 응답이 0건인지 | 객체의 범위. 전화번호 |
-| 5 어떤 검색어든 응답의 모든 행은 제목에 그 검색어가 든 강의 | 정상 검색어 1개와 위의 4개 | 검색 결과가 강의 목록을 제목으로 거른 것과 같은지 | 어떤 검색어가 와도 응답이 열어 준 범위(강의의 id와 제목) 안에 있습니다 |
+| 1 작은따옴표가 든 검색어도 오류 없이 200에 0건 | `'` | API가 작은따옴표 하나인 검색어에 200과 빈 배열(`[]`)로 응답하는지 | 검색어의 작은따옴표가 SQL 문법 오류를 일으키지 않는가. 공격자는 API의 500 응답으로 검색어가 쿼리의 일부로 실행된다는 것을 확인할 수 있습니다 |
+| 2 검색어로 조건을 항상 참으로 만들 수 없음 | `암호학' OR '%'='` | API가 이 검색어에 200과 빈 배열(`[]`)로 응답하는지 | 검색어가 `WHERE` 조건을 항상 참으로 바꾸지 못하는가 (tautology 기반) |
+| 3 검색어로 사용자 테이블을 읽을 수 없음 | `… UNION SELECT … FROM users --` | API가 이 검색어에 200과 빈 배열(`[]`)로 응답하는지 | 기밀성. 공격자가 검색어로 사용자 테이블의 계정 이름과 비밀번호 해시를 읽을 수 없는가 (UNION 기반) |
+| 4 검색어로 신청 테이블을 읽을 수 없음 | `… UNION SELECT … FROM enrollments --` | API가 이 검색어에 200과 빈 배열(`[]`)로 응답하는지 | 기밀성. 공격자가 검색어로 신청 테이블의 전화번호를 읽을 수 없는가 (UNION 기반) |
+| 5 어떤 검색어든 응답의 모든 행은 제목에 그 검색어가 든 강의 | 정상 검색어 `보안`과 테스트 1~4의 검색어 4개 | API의 검색 응답이, 강의 전체 목록에서 제목에 검색어가 든 강의만 고른 결과와 같은지 | 기밀성. 공격자가 어떤 검색어를 보내도 강의 목록(`GET /courses`)에 없는 행을 읽을 수 없는가 |
 
-테스트 1~4는 알려진 검색어를 하나씩 봅니다. 테스트 5는 검색어의 모양과 상관없이 지켜져야 하는 성질을 봅니다. 강의 전체 목록을 받아 제목에 검색어가 든 것만 고른 결과와 검색 응답이 같은지 비교합니다.
+테스트 1~4는 SQL 인젝션에 쓰는 검색어를 하나씩 보내 API의 응답을 확인합니다. 테스트 5는 검색어가 무엇이든 성립해야 하는 조건을 확인합니다. 테스트 5는 `GET /courses`로 강의 전체 목록을 조회해 제목에 검색어가 든 강의만 고릅니다([`apps/api/test/courses.test.mjs` 90행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-fix-6/apps/api/test/courses.test.mjs#L90)). 그리고 검색 응답에 이 강의가 아닌 행이 없는지([91~92행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-fix-6/apps/api/test/courses.test.mjs#L91-L92)), 검색 응답의 건수가 고른 강의의 수와 같은지([93행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-fix-6/apps/api/test/courses.test.mjs#L93)) 확인합니다.
 
 이 커밋에서 API 테스트는 99건 중 94건이 통과하고 5건이 실패합니다.
 
@@ -241,18 +243,18 @@ flowchart LR
 ✖ 강의 검색 5: 어떤 검색어든 응답의 모든 행은 제목에 그 검색어가 든 강의
 ```
 
-테스트는 응답 전체를 비교하지 않고 상태 코드와 건수만 비교합니다. 응답 전체를 비교하면 실패할 때 비교한 값(비밀번호 해시, 전화번호)이 테스트 로그에 찍힙니다. DB의 내용을 바꾸는 검색어는 테스트에 넣지 않았습니다. 결함 상태에서 실제로 실행될 수 있고, 다른 테스트가 같은 DB를 씁니다.
+테스트는 응답 전체를 비교하지 않고 상태 코드와 건수만 비교합니다. 응답 전체를 비교하면, 테스트가 실패할 때 `assert`가 비교한 값(비밀번호 해시, 전화번호)을 테스트 로그에 기록합니다. 데이터를 변경하거나 삭제하는 SQL이 든 검색어는 테스트에 넣지 않았습니다. 결함 상태에서는 DB가 그 SQL을 실제로 실행할 수 있고, 다른 테스트가 같은 DB를 쓰기 때문입니다.
 
 ### 3.5 보안 관점: 접근통제 구성 요소로 본 결함
 
 | 구성 요소 | 이 결함에서 | 코드에서 확인하는 곳 |
 |---|---|---|
-| 주체 | 로그인하지 않은 요청 | |
-| 객체 | 이 경로가 로그인 없이 공개하는 것은 강의의 id와 제목뿐입니다. **서비스가 검색어를 SQL에 문자열로 연결합니다. 이 부분이 결함이고, 그 결과 검색어로 쿼리를 바꿔 사용자 테이블과 신청 테이블까지 읽을 수 있는 취약점(SQL 인젝션)이 생깁니다** | [`courses/courses.service.ts` 17~21행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-6/apps/api/src/courses/courses.service.ts#L17-L21) |
-| 시행 (PEP) | 정상. `@Public`이 붙은 핸들러라 통과시킵니다 | `auth/auth.guard.ts`, `authz/authz.guard.ts` |
-| 판단 (PE) | 호출되지 않습니다. 공개 경로라 판단할 것이 없습니다 | `authz/policy.ts` |
+| 주체 | 토큰 없이 요청한 사람. 인증 Guard가 18행에서 `true`를 반환해서 `authenticate(token)`(24행)은 실행되지 않습니다 | [`auth/auth.guard.ts` 18행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-6/apps/api/src/auth/auth.guard.ts#L18) |
+| 객체 | 강의 목록(강의의 id와 제목). 강의 목록 핸들러가 반환하는 `CourseView`에는 `id`와 `title`만 있습니다([`courses/courses.service.ts` 6행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-6/apps/api/src/courses/courses.service.ts#L6)). **`search()`가 검색어를 SQL 문자열에 이어 붙입니다. 이 부분이 결함이고, 그 결과 공격자가 검색어에 넣은 SQL로 사용자 테이블과 신청 테이블까지 읽을 수 있는 취약점(SQL 인젝션)이 생깁니다** | [`courses/courses.service.ts` 17~21행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-6/apps/api/src/courses/courses.service.ts#L17-L21) |
+| 시행 (PEP) | 정상으로 동작합니다. 강의 목록 핸들러에 `@Public()`이 붙어 있어서, 인증 Guard와 인가 Guard는 `isPublic()`이 `true`를 반환하는 이 요청을 통과시킵니다 | [`courses/courses.controller.ts` 12행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-6/apps/api/src/courses/courses.controller.ts#L12), [`auth/auth.guard.ts` 18행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-6/apps/api/src/auth/auth.guard.ts#L18), [`authz/authz.guard.ts` 27행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-6/apps/api/src/authz/authz.guard.ts#L27) |
+| 판단 (PE) | 인가 Guard가 27행에서 `true`를 반환해서 `can()`을 호출하는 59행은 실행되지 않습니다. 공개 경로이므로 의도한 동작입니다 | [`authz/authz.guard.ts` 59행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-6/apps/api/src/authz/authz.guard.ts#L59) |
 
-결함 1과 2는 시행 지점이 요청을 막지 못한 경우였습니다. 결함 6에서는 시행 지점이 맞게 동작합니다. 시행 지점은 "어느 핸들러로 가는 요청인가"까지만 보고, 그 핸들러가 DB에서 무엇을 읽는지는 보지 않습니다. 신청 한 건 조회(`GET /enrollments/:id`)는 소유자, 담당 강사, 관리자만 통과하는데, 같은 전화번호가 공개 경로의 쿼리로 나옵니다.
+결함 1과 결함 2는 시행 지점(PEP)인 Guard에 결함이 있었습니다. 결함 1에서는 관리자 컨트롤러에 Guard가 적용되지 않았고, 결함 2에서는 Guard가 토큰 확인을 건너뛰었습니다. 결함 6에서는 Guard가 정상으로 동작합니다. Guard는 요청이 라우팅된 핸들러에 붙은 `@Public`과 `@Authorize`를 읽어 요청을 통과시킬지 판단합니다. 핸들러가 실행하는 쿼리가 어느 테이블을 읽는지는 확인하지 않습니다. 신청 한 건 조회(`GET /enrollments/:id`)에서 `can()`은 신청자, 담당 강사, 관리자의 요청만 허용합니다([`authz/policy.ts` 32~37행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-6/apps/api/src/authz/policy.ts#L32-L37)). 그런데 공격자는 신청에 든 전화번호를 공개 경로인 강의 검색으로 읽을 수 있습니다.
 
 ## 4. 조치
 
