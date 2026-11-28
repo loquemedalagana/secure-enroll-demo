@@ -3,8 +3,8 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../generated/prisma/client.js';
 import { requireEnv } from '../config.js';
 
-// DB 연결은 첫 쿼리 때 맺는다. 시작 시점에 DB가 없어도 프로세스는 뜨고,
-// 준비 상태는 /health/ready가 알려 준다.
+// PrismaClient는 첫 쿼리를 실행할 때 DB에 접속한다. 그래서 API를 시작할 때 DB에 접속할 수 없어도 프로세스는 시작된다.
+// API가 DB에 접속할 수 있는지는 /health/ready의 응답으로 확인한다.
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleDestroy {
   constructor() {

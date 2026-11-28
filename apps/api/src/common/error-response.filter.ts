@@ -2,7 +2,7 @@ import { type ArgumentsHost, Catch, type ExceptionFilter, HttpException, Logger 
 import type { Response } from 'express';
 
 // 모든 오류 응답은 { "error": "<코드>" } 한 가지 형식이다.
-// 스택, 내부 경로, 예외 메시지는 응답에 넣지 않고 서버 로그에만 남긴다.
+// 스택, 내부 경로, 예외 메시지는 응답에 포함하지 않고 서버 로그에만 기록한다.
 const CODES: Record<number, string> = {
   400: 'bad_request',
   401: 'unauthorized',
@@ -33,7 +33,8 @@ export class ErrorResponseFilter implements ExceptionFilter {
         return;
       }
       const body: ErrorBody = { error: CODES[status] ?? 'request_error' };
-      // 입력 검증 실패만 어느 필드가 왜 틀렸는지 알려 준다. 검증 규칙이 만든 문구이고 입력값은 포함하지 않는다.
+      // 입력값 검증에 실패한 400 응답에만, 어느 필드가 어느 규칙에 맞지 않는지를 details에 포함한다.
+      // details의 문구는 검증 규칙이 만들고, 입력값은 포함하지 않는다.
       const detail = exception.getResponse();
       if (status === 400 && typeof detail === 'object' && detail !== null) {
         const message = (detail as { message?: unknown }).message;

@@ -1,31 +1,35 @@
 # CI 하드닝: 파이프라인이 구조적으로 막는 것
 
-> 의존성과 CI 설정의 변경을 사람이 매번 확인하지 않아도, 파이프라인이 정해진 기준으로 막도록 구성했습니다. 각 통제가 무엇을 막고 어떤 비용이 드는지, 그리고 아직 남은 위험이 무엇인지 함께 적습니다.
+> 의존성과 CI 설정의 변경을 사람이 매번 확인하지 않아도, 기준에 맞지 않는 변경은 CI가 실패해서 `main`에 병합되지 않도록 파이프라인을 구성했습니다. 각 통제가 무엇을 막고 어떤 비용이 드는지, 그리고 아직 남은 위험이 무엇인지 함께 적습니다.
 
 ## 1. 구성
 
 | 잡 | 하는 일 | 권한 |
 |---|---|---|
-| `web` (v1의 `test`) | `apps/web`에서 `npm ci` → `npm run build` → `npm test`(정책 단위 16건 + 권한 매트릭스 10건 + 로그인 요청 형식·출처 검사 3건) | `contents: read` |
-| `api` | 러너 안의 PostgreSQL(service container)에 `apps/api`의 마이그레이션과 시드를 적용하고 `npm test` 8건 실행 | `contents: read` |
+| `web` (v1의 `test`) | `apps/web`에서 `npm ci` → `npm run build` → `npm test`(정책 단위 16건 + 권한 매트릭스 10건 + 로그인 CSRF 방어 3건) | `contents: read` |
+| `api` | 러너 안의 PostgreSQL(service container)에 `apps/api`의 마이그레이션과 시드를 적용하고 `npm test` 134건 실행 | `contents: read` |
 | `audit (web)`, `audit (api)` | `.github/scripts/audit-gate.mjs`로 앱별 `npm audit` 결과를 앱별 예외 목록과 대조 | `contents: read` |
-| `netpol` | 러너 안에 kind 클러스터를 만들고 `k8s/up.sh` → `k8s/verify/run.mjs`로 네트워크 정책과 앱 인가를 함께 검사. 결과 표는 작업 요약에 남김 | `contents: read` |
+| `netpol` | 러너 안에 kind 클러스터를 만들고 `k8s/up.sh` → `k8s/verify/run.mjs`로 네트워크 정책과 앱 인가를 함께 확인. 결과 표는 Summary에 남김 | `contents: read` |
 
 ```mermaid
 flowchart LR
-  trig(["push · PR<br/>main, fixed"])
+  trig(["push · PR<br/>main"])
 
-  subgraph test["test · 앱 인가"]
+  subgraph web["web · 웹 테스트"]
     t1["npm ci"] --> t2["npm run build"] --> t3["npm test<br/>29건"]
   end
+  subgraph api["api · API 테스트"]
+    p1["npm ci"] --> p2["npm run build"] --> p3["PostgreSQL에<br/>마이그레이션과<br/>시드 적용"] --> p4["npm test<br/>134건"]
+  end
   subgraph audit["audit · 의존성"]
-    a1["audit-gate.mjs<br/>예외 목록과 대조"]
+    a1["audit-gate.mjs<br/>앱별 예외 목록과<br/>대조"]
   end
   subgraph netpol["netpol · 네트워크 정책"]
-    n1["kind · Cilium CLI<br/>체크섬 확인"] --> n2["k8s/up.sh<br/>클러스터 · 배포"] --> n3["k8s/verify/run.mjs<br/>기준선 · 매트릭스"] --> n4["작업 요약에<br/>결과 표"]
+    n1["kind · Cilium CLI<br/>체크섬 확인"] --> n2["k8s/up.sh<br/>클러스터 · 배포"] --> n3["k8s/verify/run.mjs<br/>기준선 · 매트릭스"] --> n4["Summary에<br/>결과 표를 남김"]
   end
 
   trig --> t1
+  trig --> p1
   trig --> a1
   trig --> n1
 
@@ -33,18 +37,24 @@ flowchart LR
   classDef supply fill:#fff1d6,stroke:#9a6700,color:#4d2d00
   classDef net fill:#d1f5dd,stroke:#1a7f37,color:#0b3d1b
   classDef neutral fill:#f6f8fa,stroke:#57606a,color:#24292f
-  class t1,t2,t3 app
+  class t1,t2,t3,p1,p2,p3,p4 app
   class a1 supply
   class n1,n2,n3,n4 net
   class trig neutral
-  style test fill:#ffffff,stroke:#57606a,color:#24292f
+  style web fill:#ffffff,stroke:#57606a,color:#24292f
+  style api fill:#ffffff,stroke:#57606a,color:#24292f
   style audit fill:#ffffff,stroke:#57606a,color:#24292f
   style netpol fill:#ffffff,stroke:#57606a,color:#24292f
 ```
 
-세 잡은 서로 기다리지 않고 따로 실행됩니다. 파랑은 앱 인가, 주황은 의존성, 초록은 네트워크 정책을 확인하는 단계입니다.
+GitHub Actions는 `web`, `api`, `audit`, `netpol` 잡을 서로 기다리지 않고 따로 실행합니다. GitHub Actions는 `audit` 잡을 `apps/web`과 `apps/api`에 한 번씩 실행합니다.
 
-- 트리거: `main`, `fixed`의 push와 pull request, 그리고 Actions 탭의 수동 실행(`workflow_dispatch`). `vulnerable`은 의도된 결함 때문에 테스트 4건이 실패하는 것이 정상이라 자동 실행 대상이 아닙니다.
+- 회색 상자는 CI를 시작하는 이벤트(`main`의 push와 pull request)를 나타냅니다.
+- 파란색 상자는 웹과 API를 빌드하고 테스트하는 단계를 나타냅니다.
+- 주황색 상자는 의존성을 확인하는 단계를 나타냅니다.
+- 초록색 상자는 네트워크 정책을 확인하는 단계를 나타냅니다.
+
+- 트리거: `main`의 push와 pull request, 그리고 Actions 탭의 수동 실행(`workflow_dispatch`). v1 브랜치(`vulnerable`, `fixed`, `k8s-netpol`)는 ruleset `v1-frozen`이 변경을 금지하므로, v1 브랜치에서 push로 CI가 실행되는 일은 없습니다. `vulnerable`은 의도된 결함 때문에 테스트 4건이 실패하는 것이 정상이라 자동 실행 대상이 아닙니다.
 - 잡을 나눠서, 하나가 실패해도 나머지 결과는 따로 보이게 했습니다.
 - `netpol` 잡의 워크플로에는 도구 설치와 스크립트 호출만 두었습니다. 내용은 로컬에서도 그대로 실행할 수 있는 `k8s/`의 스크립트에 있습니다. 클러스터는 러너와 함께 사라집니다.
 
@@ -63,20 +73,22 @@ flowchart LR
 | 컨테이너 이미지를 다이제스트로 고정(Node 베이스, kind 노드) | 같은 태그가 다른 이미지를 가리키게 됨 | 베이스 이미지의 보안 패치가 자동으로 들어오지 않음 | Cilium 이미지는 직접 고정하지 않고, 고정한 버전(1.20.1)의 설치 차트가 지정한 다이제스트를 따름 |
 | 앱 이미지를 레지스트리에 푸시하지 않고 `kind load`로만 전달 | 빌드한 이미지가 외부에 공개되거나 다른 곳에서 당겨짐 | 러너마다 이미지를 새로 빌드해야 함 | — |
 | `timeout-minutes`, `concurrency` | 멈춘 잡이 러너를 계속 점유함, 같은 브랜치의 중복 실행 | 오래 걸리는 정상 실행이 중단될 수 있음 | — |
+| ruleset `main`이 pull request와 필수 점검 5건(`web`, `api`, `netpol`, `audit (web)`, `audit (api)`)을 요구하고 강제 푸시와 삭제를 금지 | CI가 실패한 변경이 `main`에 병합됨, `main`의 이력이 덮어써짐 | 문서 한 줄을 고칠 때도 pull request를 만들고 CI 통과를 기다려야 함 | 필요한 승인 수가 0이라 작성자가 혼자 병합할 수 있음 |
+| ruleset `tags`와 `v1-frozen`이 태그와 v1 브랜치(`vulnerable`, `fixed`, `k8s-netpol`)의 변경과 삭제를 금지 | 결함 태그와 수정 태그, v1 브랜치가 다른 커밋을 가리키게 됨 | 잘못 만든 태그를 지우거나 옮길 수 없음 | — |
 
 ## 3. 감사 게이트 설계
 
-**현재 상태.** `next`를 14.x 최신 패치인 14.2.35로 업그레이드해 권고가 36건에서 29건(critical 3, high 11, moderate 13, low 2)으로 줄었습니다(2026-10-24 기준). 이후 moderate 권고 1건이 새로 공개돼 2026-11-23 기준으로는 30건입니다. 게이트는 high 이상만 보므로 대상 건수는 그대로입니다. 남은 high 이상 14건은 15.5.x 이상으로 메이저 버전을 업그레이드해야 해결됩니다. 이 중 `postcss` 2건은 `next`가 내부에 고정한 `postcss@8.4.31`에서 옵니다. 이 14건을 예외로 둔 근거는 이 앱을 로컬과 CI 러너에서만 실행하고 외부에 노출하지 않는다는 점입니다. 만료일(2027-01-31)에 다시 판단합니다.
+**현재 상태.** `next`를 14.x 최신 패치인 14.2.35로 업그레이드해 권고가 36건에서 29건(critical 3, high 11, moderate 13, low 2)으로 줄었습니다(2026-10-24 기준). 이후 moderate 권고 1건이 새로 공개돼 2026-11-23 기준으로는 30건입니다. 게이트는 high 이상만 보므로 대상 건수는 그대로입니다. 남은 high 이상 14건은 15.5.x 이상으로 메이저 버전을 업그레이드해야 해결됩니다. 이 중 `postcss` 2건은 `next`가 내부에 고정한 `postcss@8.4.31`에서 옵니다. 이 앱을 로컬과 CI 러너에서만 실행하고 외부에 노출하지 않으므로 이 14건을 예외로 두었습니다. 만료일(2027-01-31)에 다시 판단합니다.
 
 **검토한 세 안.**
 - 결과만 기록(report-only): 항상 통과하므로 가용성은 가장 높지만, 통제가 아니라 관찰입니다.
-- critical만 차단: 현재 critical이 있어 CI가 계속 실패합니다. CI가 계속 실패 상태이면 실패를 무시하게 됩니다.
-- **high 이상 차단 + 문서화된 예외 (채택):** 지금 아는 위험은 사유와 기한을 붙여 수용하고, 그 밖의 새 위험만 막습니다.
+- critical만 차단: 현재 critical이 있어 CI가 계속 실패합니다. CI가 항상 실패하면, 새 권고가 공개되어도 CI의 결과가 달라지지 않습니다.
+- **high 이상 차단 + 문서화된 예외 (채택):** 지금 아는 위험은 사유와 기한을 붙여 수용합니다. 예외 목록에 없는 high 이상 권고가 있으면 CI가 실패합니다.
 
 **설계 판단.**
 - **예외는 패키지가 아니라 권고 ID(GHSA) 단위입니다.** 패키지 단위로 예외를 적용하면 같은 패키지에 새 권고가 생겨도 드러나지 않습니다.
-- **모든 예외에 만료일(2027-01-31)이 있습니다.** 만료되면 CI가 실패해서, 위험 수용을 다시 판단하게 만듭니다. 패치는 바로 적용하고, 메이저 업그레이드는 계획과 예외로 관리한다는 정책입니다.
-- **판단할 수 없으면 실패합니다(fail-closed).** 레지스트리 장애 등으로 `npm audit`이 실패하면 CI도 실패합니다. 가용성을 일부 포기하는 대신, 확인 없이 통과하는 경로를 없앴습니다.
+- **모든 예외에 만료일(2027-01-31)이 있습니다.** 만료되면 CI가 실패해서, 위험 수용을 다시 판단하게 만듭니다. 패치는 바로 적용합니다. 메이저 업그레이드는 계획을 세우고, 업그레이드할 때까지 해당 권고를 예외 목록에 둡니다.
+- **판단할 수 없으면 실패합니다(fail-closed).** 레지스트리 장애 등으로 `npm audit`이 실패하면 CI도 실패합니다. 가용성을 일부 포기하는 대신, 권고를 확인하지 못한 채 CI가 통과하는 일을 없앴습니다.
 - 목록에 있지만 더 이상 보고되지 않는 예외는 경고만 하고 통과시킵니다. 의존성을 올린 직후 CI가 실패하지 않게 하기 위해서입니다.
 
 ## 4. 검증 (로컬에서 직접 실행)
@@ -91,7 +103,7 @@ flowchart LR
 - `npm ci`, `npm run build`, `npm test` 29건 통과 (Node 24)
 - `actionlint` 1.7.12로 워크플로 정적 검사 통과
 - GitHub Actions에서 `main`과 `fixed` 푸시 실행 모두 `test`·`audit` 통과 (2026-10-24)
-- `netpol` 잡 추가 후: 로컬에서 클러스터를 지우고 처음부터 실행해 통과, `actionlint` 통과, GitHub Actions의 pull request 실행에서 `test`·`audit`·`netpol` 통과 (2026-11-15). 러너에서 `netpol` 잡은 약 2분 30초 걸렸습니다.
+- `netpol` 잡 추가 후: 로컬에서 클러스터를 지우고 처음부터 실행해 통과, `actionlint` 통과, GitHub Actions의 pull request 실행에서 `test`·`audit`·`netpol` 통과 (2026-11-15). 러너에서 `netpol` 잡이 끝나는 데 약 2분 30초가 걸렸습니다.
 
 ## 5. 범위 밖과 확장 설계안 (구현하지 않음)
 
@@ -101,7 +113,7 @@ flowchart LR
 | Dependabot (actions·npm) | 작은 데모에서 갱신 PR 관리 비용이 큼 | actions만 주 단위로 갱신 PR을 받아, 고정한 버전이 오래 방치되는 문제를 줄임 |
 | OSV-Scanner | `npm audit`과 같은 권고 데이터를 많이 공유해 이 규모에서 추가 이득이 작음 | 여러 생태계가 섞이면 두 번째 점검으로 |
 | GitHub OIDC로 클라우드 역할 위임 | 배포·클라우드 설정은 이 저장소의 범위 밖 | 장기 액세스 키 없이 짧은 수명의 자격 증명으로 배포 |
-| 환경 보호 규칙, 승인 단계, 브랜치 보호와 필수 점검 | 저장소 설정 영역이고 배포가 없음 | 운영 반영 전 사람의 승인과 CI 통과를 강제 |
+| 환경 보호 규칙, 승인 단계 | 배포가 없음 | 운영 반영 전 사람의 승인을 강제 |
 | SBOM, 빌드 출처 증명과 서명 | 배포 산출물이 없음 | 무엇으로 빌드했는지 증명하고 변조를 검증 |
 
 ---

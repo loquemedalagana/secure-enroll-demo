@@ -1,5 +1,6 @@
-// 요청 로그 테스트 (HTTP 수준, 실제 PostgreSQL)
-// 서버 출력에서 JSON으로 된 줄을 읽어, 요청마다 한 줄이 정해진 필드로만 남는지 본다.
+// 요청 로그 테스트
+// API를 띄우고 HTTP 요청을 보낸다(앱 계층, L7). DB는 실제 PostgreSQL을 쓴다.
+// API가 서버 로그에 JSON 형식으로 기록한 줄을 읽어, 요청 하나에 한 줄이고 그 줄에 정해진 필드만 있는지 확인한다.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { bearerFor, startServer } from './helpers.mjs';
@@ -79,7 +80,7 @@ test('요청 로그: 허용한 인가 판단도 남음 (관리자 → 전체 신
   );
 });
 
-test('요청 로그: 판단까지 가지 않은 요청에는 uid, action, allowed가 없음 (공개 경로, 401)', async () => {
+test('요청 로그: 인가 Guard가 can()을 호출하지 않은 요청에는 uid, action, allowed가 없음 (공개 경로, 401)', async () => {
   for (const [path, expected] of [['/courses', 200], ['/auth/me', 401]]) {
     const { status, added } = await logOf(path);
     assert.equal(status, expected, path);

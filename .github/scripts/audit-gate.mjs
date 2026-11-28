@@ -10,7 +10,7 @@ const exceptionsPath = process.argv[2] ?? '.github/audit-exceptions.json';
 const appDir = process.argv[3] ?? '.';
 const today = new Date().toISOString().slice(0, 10);
 
-// 작업 요약(GITHUB_STEP_SUMMARY)에 결과를 쓴다. 로컬에서는 아무것도 하지 않는다(같은 내용이 표준 출력에 있다).
+// Summary(GITHUB_STEP_SUMMARY)에 결과를 쓴다. 로컬에서는 아무것도 하지 않는다(같은 내용이 표준 출력에 있다).
 function summarize(lines) {
   if (!process.env.GITHUB_STEP_SUMMARY) return;
   appendFileSync(process.env.GITHUB_STEP_SUMMARY, [`### 의존성 감사 (${appDir})`, '', ...lines, ''].join('\n'));

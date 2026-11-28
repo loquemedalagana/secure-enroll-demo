@@ -16,10 +16,10 @@ const cases = [
   ['비로그인 → 신청 조회', null, 'enrollment:read', mine, false],
   ['비로그인 → 관리자', null, 'admin:read', undefined, false],
   ['student → 본인 신청', student, 'enrollment:read', mine, true],
-  ['student → 타인 신청', student, 'enrollment:read', others, false],
+  ['student → 다른 사용자의 신청', student, 'enrollment:read', others, false],
   ['student → 리소스 없음', student, 'enrollment:read', undefined, false],
   ['student → 관리자', student, 'admin:read', undefined, false],
-  ['instructor → 자기 강의 신청', instructor, 'enrollment:read', mine, true],
+  ['instructor → 담당 강의 신청', instructor, 'enrollment:read', mine, true],
   ['instructor → 타 강사 강의 신청', instructor, 'enrollment:read', others, false],
   ['instructor → 리소스 없음', instructor, 'enrollment:read', undefined, false],
   ['instructor → 관리자', instructor, 'admin:read', undefined, false],
@@ -28,7 +28,7 @@ const cases = [
   ['admin → 관리자', admin, 'admin:read', undefined, true],
   ['알 수 없는 역할', { uid: 'x', role: 'guest' }, 'enrollment:read', mine, false],
   ['알 수 없는 행위', admin, 'enrollment:delete', mine, false],
-  ['uid가 소유자·강사와 다른 student가 강사 id만 일치', { uid: 'i1', role: 'student' }, 'enrollment:read', mine, false],
+  ['uid가 신청자·강사와 다른 student가 강사 id만 일치', { uid: 'i1', role: 'student' }, 'enrollment:read', mine, false],
 ];
 
 for (const [name, user, action, resource, expected] of cases) {

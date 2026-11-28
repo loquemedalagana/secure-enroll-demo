@@ -13,9 +13,9 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { AUTHORIZE, type AuthorizeRule } from './authorize.decorator.js';
 import { type Resource, can } from './policy.js';
 
-// 인가 Guard. 인증 Guard 다음에 돈다.
-// 핸들러가 @Authorize로 선언한 행위를 can()에 물어 보고, 허용이 아니면 403이다.
-// 행위를 선언하지 않은 핸들러는 거부한다.
+// 인가 Guard는 인증 Guard 다음에 실행된다.
+// 핸들러에 붙은 @Authorize의 행위(action)로 can()을 호출하고, can()이 false를 반환하면 403으로 응답한다.
+// @Authorize가 붙지 않은 핸들러의 요청에도 403으로 응답한다.
 @Injectable()
 export class AuthzGuard implements CanActivate {
   constructor(
@@ -57,7 +57,7 @@ export class AuthzGuard implements CanActivate {
     }
 
     const allowed = can(user, rule.action, resource);
-    // 판단 결과를 요청 로그가 읽을 수 있게 남긴다. 거부한 경우에도 남긴다.
+    // requestLog가 이 값을 읽어 요청 로그에 기록한다. can()이 거부한 요청도 기록하도록, 403으로 응답하기 전에 아래 행을 실행한다.
     req.authz = { action: rule.action, allowed };
     if (!allowed) throw new ForbiddenException();
     return true;

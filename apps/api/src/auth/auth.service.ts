@@ -11,13 +11,13 @@ export type LoginResult = { token: string; expiresIn: number };
 @Injectable()
 export class AuthService {
   private readonly secret = requireSecret('TOKEN_SECRET');
-  // 없는 아이디일 때 대신 비교할 해시. 아이디가 있을 때와 같은 양의 계산을 하게 해서
-  // 응답 시간으로 아이디 존재 여부를 알 수 없게 한다.
+  // 존재하지 않는 아이디로 로그인을 요청했을 때 비밀번호와 비교하는 해시다. 아이디가 존재할 때와 같은 양의
+  // 해시 계산을 하므로, 공격자는 응답 시간으로 아이디가 존재하는지 알 수 없다.
   private readonly dummyHash = hashPassword(randomBytes(16).toString('hex'));
 
   constructor(private readonly prisma: PrismaService) {}
 
-  // 아이디가 없을 때와 비밀번호가 틀릴 때를 구분하지 않고 같은 401을 낸다.
+  // 존재하지 않는 아이디와 잘못 입력한 비밀번호를 구분하지 않고 모두 401로 응답한다.
   async login(username: string, password: string): Promise<LoginResult> {
     const user = await this.prisma.user.findUnique({
       where: { username },
@@ -28,8 +28,8 @@ export class AuthService {
     return { token: issueToken(user.id, this.secret), expiresIn: TOKEN_TTL_SECONDS };
   }
 
-  // 토큰이 유효하면 그 사용자의 id와 현재 역할을 돌려준다.
-  // 역할은 토큰이 아니라 DB에서 읽으므로, 역할이 바뀌거나 계정이 지워지면 다음 요청부터 반영된다.
+  // 토큰이 유효하면 토큰의 uid로 DB에서 사용자의 id와 role을 읽어 반환한다. role은 토큰이 아니라 DB에서 읽는다.
+  // 그래서 role을 변경하거나 계정을 삭제하면 같은 토큰의 다음 요청부터 반영된다.
   async authenticate(token: string): Promise<AuthUser | null> {
     const payload = verifyToken(token, this.secret);
     if (!payload) return null;

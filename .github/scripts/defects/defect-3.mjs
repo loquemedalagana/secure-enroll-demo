@@ -1,9 +1,9 @@
-// 결함 3 재현: 서버 로그에 비밀번호와 토큰이 남는지 본다.
+// 결함 3 재현: API가 비밀번호와 토큰을 서버 로그에 기록하는지 확인한다.
 // 보고서: docs/diagnosis/defect-3.md
 //
 // 사용법: node .github/scripts/defects/defect-3.mjs <서버 로그 파일> [--expect vulnerable|blocked]
-//   서버를 출력이 파일로 가도록 띄운 뒤 실행한다. 예: npm start > /tmp/api.log 2>&1 &
-//   이 스크립트가 요청을 보내기 전에 있던 줄은 보지 않는다. 찾은 값은 출력하지 않고 줄 수만 출력한다.
+//   API를 띄울 때 서버 로그를 파일에 저장하게 한 뒤 이 스크립트를 실행한다. 예: npm start > /tmp/api.log 2>&1 &
+//   이 스크립트가 요청을 보내기 전에 서버 로그에 있던 줄은 확인하지 않는다. 찾은 값은 출력하지 않고, 값이 있는 줄의 수만 출력한다.
 import { readFileSync, statSync } from 'node:fs';
 import { BASE, finish } from './lib.mjs';
 

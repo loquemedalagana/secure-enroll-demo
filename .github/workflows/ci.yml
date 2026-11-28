@@ -1,7 +1,7 @@
 name: ci
 
-# 이 파일은 main의 워크플로다. v1 브랜치(fixed, vulnerable, k8s-netpol)는 각자 자기 브랜치의 워크플로 파일을 따른다.
-# workflow_dispatch는 Actions 탭에서 수동으로 다시 돌리기 위한 것이다.
+# 이 파일은 main의 워크플로다. v1 브랜치(fixed, vulnerable, k8s-netpol)에서는 그 브랜치에 있는 워크플로 파일이 실행된다.
+# workflow_dispatch는 Actions 탭에서 이 워크플로를 수동으로 다시 실행할 때 쓴다.
 on:
   push:
     branches: [main]
@@ -40,11 +40,12 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test 2>&1 | tee "$RUNNER_TEMP/test-output.txt"
-      # 테스트가 실패해도 요약은 쓴다. 건수와 실패한 테스트 이름만 옮긴다.
+      # 테스트가 실패해도 Summary는 쓴다. 건수와 실패한 테스트 이름만 옮긴다.
       - if: always()
         run: node ../../.github/scripts/test-summary.mjs "웹 테스트" "$RUNNER_TEMP/test-output.txt"
 
-  # API(Nest.js): 러너 안의 PostgreSQL에 마이그레이션과 시드를 적용하고 HTTP 수준 테스트를 돌린다.
+  # API(Nest.js): 러너 안의 PostgreSQL에 마이그레이션과 시드를 적용한다.
+  # 그 뒤 API를 띄우고 HTTP 요청을 보내는 테스트를 실행한다(앱 계층, L7).
   api:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -89,7 +90,7 @@ jobs:
       - run: npm run db:migrate
       - run: npm run db:seed
       - run: npm test 2>&1 | tee "$RUNNER_TEMP/test-output.txt"
-      # 테스트가 실패해도 요약은 쓴다. 건수와 실패한 테스트 이름만 옮긴다.
+      # 테스트가 실패해도 Summary는 쓴다. 건수와 실패한 테스트 이름만 옮긴다.
       - if: always()
         run: node ../../.github/scripts/test-summary.mjs "API 테스트" "$RUNNER_TEMP/test-output.txt"
 
@@ -121,7 +122,7 @@ jobs:
           EXCEPTIONS: ${{ matrix.exceptions }}
           APP: ${{ matrix.app }}
 
-  # 네트워크 계층 검증. 러너 안에 kind 클러스터를 만들어 정책을 걸고 매트릭스를 돌린다.
+  # 네트워크 계층을 검증한다. 러너 안에 kind 클러스터를 만들어 네트워크 정책을 적용하고 매트릭스의 요청을 실행한다.
   # 클러스터는 러너와 함께 사라진다. 레지스트리 푸시나 배포는 하지 않는다.
   netpol:
     runs-on: ubuntu-24.04
@@ -156,7 +157,7 @@ jobs:
           echo "$bin" >> "$GITHUB_PATH"
       # 이미지 빌드, 클러스터 생성, Cilium 설치, 앱·클라이언트 배포. 로컬과 같은 스크립트다.
       - run: ./k8s/up.sh
-      # 결과 표는 작업 요약에 남는다. 한 줄이라도 기대와 다르면 실패한다.
+      # 결과 표는 Summary에 남는다. 한 줄이라도 기대와 다르면 실패한다.
       - run: node k8s/verify/run.mjs
       - name: 실패했을 때 클러스터 상태 출력
         if: failure()

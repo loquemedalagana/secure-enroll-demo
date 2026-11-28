@@ -1,5 +1,5 @@
-# 기본 거부: 네임스페이스의 모든 파드에 대해 들어오는 것도 나가는 것도 막는다.
-# 허용은 아래 두 정책이 명시한 것뿐이다. 앱에는 나가는 허용이 하나도 없다.
+# 기본 거부: 네임스페이스의 모든 파드에 Ingress와 Egress를 막는다.
+# 허용은 아래 두 정책이 명시한 것뿐이다. 앱에는 Egress 허용 규칙이 없다.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:

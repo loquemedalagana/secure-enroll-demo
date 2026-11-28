@@ -1,4 +1,5 @@
-// 권한 표 테스트 (HTTP 수준, 실제 PostgreSQL)
+// 권한 표 테스트
+// API를 띄우고 HTTP 요청을 보낸다(앱 계층, L7). DB는 실제 PostgreSQL을 쓴다.
 // 경로마다 누가 요청하면 어떤 상태 코드가 나와야 하는지를 표 하나로 적고, 칸을 전부 요청해 본다.
 // README의 권한 표와 같은 내용이다. 표를 고치면 README도 같이 고친다.
 import { test, before, after } from 'node:test';
@@ -43,7 +44,7 @@ for (const [path, ...expected] of MATRIX) {
   });
 }
 
-test('권한 표: 신청 목록에 나오는 신청과 한 건 조회가 허용되는 신청이 사람마다 같음', async () => {
+test('권한 표: 사용자마다 신청 목록에 포함된 신청과 한 건 조회가 허용되는 신청이 같음', async () => {
   // 목록의 범위(enrollmentScope)와 한 건의 판단(can)은 코드가 따로다. 둘이 어긋나지 않는지 본다.
   for (const who of WHO.slice(1)) {
     const listed = (await (await get('/enrollments', who)).json()).map((e) => e.id).sort();

@@ -52,8 +52,8 @@ spec:
         capabilities:
           drop: [ALL]
 ---
-# outsider: 다른 네임스페이스의 파드. 이 네임스페이스에는 정책이 없어 나가는 쪽은 열려 있다.
-# 보내는 쪽이 제한되지 않아도 받는 쪽(앱)의 정책이 막는지 확인하기 위한 것이다.
+# outsider: 다른 네임스페이스의 파드. 이 네임스페이스에는 정책이 없어 Egress는 열려 있다.
+# 출발지의 Egress가 제한되지 않아도 앱의 Ingress 정책이 막는지 확인하기 위한 것이다.
 apiVersion: v1
 kind: Namespace
 metadata:

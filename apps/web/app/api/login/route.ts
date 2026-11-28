@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { checkPassword } from '@/lib/data';
 import { SESSION_COOKIE, createSession } from '@/lib/session';
 
-// Origin이 있으면 같은 호스트에서 온 요청인지 본다. 브라우저는 교차 출처 POST에 Origin을 붙인다.
+// Origin 헤더가 있으면 Origin의 host가 요청의 Host 헤더와 같은지 비교한다. 브라우저는 교차 출처 POST 요청에 Origin 헤더를 붙인다.
 function isSameOrigin(req: Request): boolean {
   const origin = req.headers.get('origin');
   if (!origin) return true;

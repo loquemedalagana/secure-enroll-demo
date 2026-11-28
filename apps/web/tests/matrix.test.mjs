@@ -1,4 +1,4 @@
-// 권한 매트릭스 테스트 (HTTP 수준)
+// 권한 매트릭스 테스트. 웹 앱을 띄우고 HTTP 요청을 보낸다(앱 계층, L7).
 // 실행 전: npm ci && npm run build
 // 기대 결과: vulnerable 브랜치에서는 일부 실패(= 인가 결함의 증거), fixed 브랜치에서는 전부 통과.
 import { test, before, after } from 'node:test';
@@ -75,16 +75,16 @@ test('admin → 관리자 API 200', async () => {
 test('student → 본인 신청 200', async () => {
   assert.equal((await get('/api/enrollments/e1', await login('student1'))).status, 200);
 });
-test('student → 타인 신청 403', async () => {
+test('student → 다른 사용자의 신청 403', async () => {
   assert.equal((await get('/api/enrollments/e2', await login('student1'))).status, 403);
 });
-test('instructor → 자기 강의 수강 신청 200', async () => {
+test('instructor → 담당 강의 수강 신청 200', async () => {
   assert.equal((await get('/api/enrollments/e1', await login('instructor1'))).status, 200);
 });
 test('instructor → 다른 강사 강의 수강 신청 403', async () => {
   // e3 = 강의 c2(instructor2 소속). instructor1은 접근 불가여야 함
   assert.equal((await get('/api/enrollments/e3', await login('instructor1'))).status, 403);
 });
-test('admin → 타인 신청 200', async () => {
+test('admin → 다른 사용자의 신청 200', async () => {
   assert.equal((await get('/api/enrollments/e2', await login('admin1'))).status, 200);
 });

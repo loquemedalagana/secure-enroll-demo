@@ -72,7 +72,7 @@ function measure(rows) {
   });
 }
 
-// Hubble에 남아야 하는 차단 기록. 방향은 어느 쪽 정책이 막았는지를 뜻한다(EGRESS=보내는 쪽, INGRESS=받는 쪽).
+// Hubble에 남아야 하는 차단 기록. 방향은 어느 정책이 막았는지를 뜻한다(EGRESS는 출발지의 정책, INGRESS는 앱의 정책).
 const expectedDrops = [
   { label: 'bystander → enroll-app:3000', src: 'bystander', dst: 'enroll-app', port: 3000, direction: 'EGRESS' },
   { label: 'outsider → enroll-app:3000', src: 'outsider', dst: 'enroll-app', port: 3000, direction: 'INGRESS' },

@@ -8,7 +8,8 @@ import { type EnrollmentView, EnrollmentsService } from './enrollments.service.j
 export class EnrollmentsController {
   constructor(private readonly enrollments: EnrollmentsService) {}
 
-  // 내가 볼 수 있는 신청 목록. 학생은 자기 신청, 강사는 자기 강의의 신청, 관리자는 전체.
+  // 요청한 사람이 조회할 수 있는 신청 목록으로 응답한다.
+  // 학생에게는 본인의 신청, 강사에게는 담당 강의의 신청, 관리자에게는 전체 신청으로 응답한다.
   @Get()
   @Authorize('enrollment:list')
   @Header('Cache-Control', 'no-store')
@@ -16,8 +17,10 @@ export class EnrollmentsController {
     return this.enrollments.listFor(user);
   }
 
-  // 신청 생성. 학생만 할 수 있다(인가 Guard가 판단한다). 정원이 찼거나 이미 신청한 강의면 409다.
-  // 누구의 신청인지는 인증 Guard가 토큰으로 확인한 사용자로 정한다. request body의 값으로 정하지 않는다.
+  // 신청을 받는다(신청 생성). 학생만 신청할 수 있고, 인가 Guard가 can()을 호출해 판단한다.
+  // 정원이 찬 강의나 이미 신청한 강의를 신청하면 409로 응답한다.
+  // 신청자의 id는 user.id다. user는 인증 Guard가 authenticate(token)으로 확인한 사용자이고,
+  // request body에는 신청자의 id를 받는 필드가 없다.
   @Post()
   @Authorize('enrollment:create')
   @Header('Cache-Control', 'no-store')
@@ -25,7 +28,7 @@ export class EnrollmentsController {
     return this.enrollments.create(user.id, body.courseId, body.phone);
   }
 
-  // 신청 한 건. 소유자, 그 강의의 담당 강사, 관리자만 볼 수 있다(인가 Guard가 판단한다).
+  // 신청 한 건을 조회한다. 신청자, 그 강의의 담당 강사, 관리자만 조회할 수 있고, 인가 Guard가 can()을 호출해 판단한다.
   @Get(':id')
   @Authorize('enrollment:read', { resource: 'enrollment' })
   @Header('Cache-Control', 'no-store')
@@ -35,7 +38,8 @@ export class EnrollmentsController {
     return enrollment;
   }
 
-  // 신청 취소. 소유자와 관리자만 할 수 있다(인가 Guard가 판단한다). 없는 id는 인가 Guard가 404로 끝낸다.
+  // 신청을 취소한다. 신청자와 관리자만 취소할 수 있고, 인가 Guard가 can()을 호출해 판단한다.
+  // 존재하지 않는 id로 요청하면 인가 Guard가 404로 응답한다.
   @Delete(':id')
   @HttpCode(204)
   @Authorize('enrollment:cancel', { resource: 'enrollment' })

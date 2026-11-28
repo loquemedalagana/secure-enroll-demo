@@ -9,7 +9,7 @@ export default async function MyEnrollments() {
   const session = await getSession();
   if (!session) redirect('/login');
 
-  // 본인 신청만 노출 (소유자 기준)
+  // 본인 신청만 노출 (신청자 기준)
   const mine = enrollments.filter((e) => {
     const course = courses.find((c) => c.id === e.courseId);
     return e.userId === session.uid && can(session, 'enrollment:read', { ownerId: e.userId, instructorId: course?.instructorId ?? '' });

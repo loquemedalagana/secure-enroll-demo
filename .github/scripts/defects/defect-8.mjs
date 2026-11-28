@@ -1,7 +1,8 @@
-// 결함 8 재현: 신청 생성(POST /enrollments)이 누구의 신청인지를 request body의 userId에서 읽는지 본다.
+// 결함 8 재현: 신청 생성(POST /enrollments) 핸들러가 신청자를 request body의 userId에서 읽는지 확인한다.
 // 보고서: docs/diagnosis/defect-8.md
 // 응답의 전화번호는 출력하지 않는다. 상태 코드와 건수, 누구의 이름으로 신청됐는지만 출력한다.
-// 재현하면서 생긴 신청은 끝날 때 관리자 계정(admin1)으로 취소한다. 신청은 본인과 관리자만 취소할 수 있는데, 이 신청들은 student1의 신청이 아니다.
+// 스크립트가 재현하면서 추가한 신청은 스크립트가 끝날 때 관리자 계정(admin1)으로 취소한다.
+// 신청은 신청자와 관리자만 취소할 수 있는데, 재현하면서 추가한 신청의 신청자는 student1이 아니기 때문이다.
 import { BASE, bearerFor, finish } from './lib.mjs';
 
 const student1 = await bearerFor('student1'); // id는 u1

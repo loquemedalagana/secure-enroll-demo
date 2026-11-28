@@ -1,4 +1,5 @@
-// Guard 적용 범위 테스트 (HTTP 수준, 실제 PostgreSQL)
+// Guard 적용 범위 테스트
+// API를 띄우고 HTTP 요청을 보낸다(앱 계층, L7). DB는 실제 PostgreSQL을 쓴다.
 // 결함 1(docs/v2-defects.md)을 잡는다: Guard가 붙지 않은 컨트롤러가 있으면 실패한다.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -33,7 +34,7 @@ test('전체 신청 목록: 학생과 강사는 403, 관리자는 200', async ()
   assert.equal((await adminList(await bearerFor(server.base, 'admin1'))).status, 200);
 });
 
-test('등록된 모든 경로: 공개 목록에 없는 경로는 토큰 없이 401', async () => {
+test('API의 모든 경로: 공개 목록에 없는 경로는 토큰 없이 401', async () => {
   // 서버가 시작할 때 남기는 경로 등록 기록에서 실제로 등록된 경로를 모은다.
   const routes = [...server.output().matchAll(/Mapped \{(\S+), (\w+)\} route/g)].map(([, path, method]) => ({ method, path }));
   // 기록 형식이 바뀌어 경로를 하나도 못 읽으면, 통과가 아니라 실패여야 한다.

@@ -1,7 +1,8 @@
 import { IsString, Length } from 'class-validator';
 
-// 여기 없는 필드가 오면 전역 ValidationPipe가 400으로 거부한다.
-// 길이 상한은 비밀번호 해시 계산에 과도한 입력이 들어가는 것을 막는다.
+// LoginDto에 없는 필드가 포함된 요청은 전역 ValidationPipe가 400으로 거부한다.
+// 길이 상한(username 64자, password 128자)을 넘는 값도 전역 ValidationPipe가 400으로 거부한다.
+// API가 긴 입력으로 scrypt 해시를 계산하기 전에 거부하기 위해서다.
 export class LoginDto {
   @IsString()
   @Length(1, 64)

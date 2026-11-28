@@ -3,7 +3,7 @@
 [![ci](https://github.com/loquemedalagana/secure-enroll-demo/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/loquemedalagana/secure-enroll-demo/actions/workflows/ci.yml)
 
 세미나 신청 서비스를 웹(Next.js), API(Nest.js), DB(PostgreSQL)로 나누어 만들고, 인증과 인가를 설계해 테스트와 CI로 검증하는 저장소입니다.
-결함을 경로마다 하나씩 막는 대신 판단을 한 곳에 모아, 같은 종류의 결함이 다시 생기지 않는 구조로 고치는 과정을 코드와 테스트로 남깁니다.
+결함이 있는 경로를 따로따로 고치는 대신 인가 판단을 한 곳에 모아, 같은 종류의 접근통제 취약점이 다시 생기지 않게 했습니다. 그 과정은 코드와 테스트에 남아 있습니다.
 같은 원칙(기본 거부 + 명시 허용)을 네트워크 계층에도 적용해 로컬 쿠버네티스 클러스터에서 검증한 구성이 `k8s/`에 있습니다.
 
 일부러 넣은 결함은 `vulnerable` 브랜치(v1)와 결함별 태그(v2)에만 있고, `main`에는 수정된 코드만 있습니다. 사용자, 데이터, 시크릿은 모두 더미 값입니다.
@@ -17,7 +17,7 @@
 | 웹 (Next.js 14) | `apps/web` | v1의 앱 그대로입니다. 인메모리 데이터로 동작하고 아직 API를 호출하지 않습니다 |
 | API (Nest.js 12) | `apps/api` | 헬스 체크, 로그인, 토큰 발급·검증, 전역 인증·인가 Guard, 신청 조회·생성·취소, 강의 목록·검색과 수강생 명단, 요청 로그. 테스트 134건 |
 | DB (PostgreSQL 18) | `compose.yaml`, `apps/api/prisma` | Prisma 마이그레이션과 더미 시드 |
-| CI | `.github/workflows/ci.yml`, `.github/workflows/defects.yml` | `ci`: `web`, `api`, `audit`(앱별), `netpol`. `defects`: 결함마다 결함 태그와 수정 태그를 띄워 재현 |
+| CI | `.github/workflows/ci.yml`, `.github/workflows/defects.yml` | `ci`: `web`, `api`, `audit`(앱별), `netpol`. `defects`: 결함별로 결함 태그와 수정 태그의 API를 띄워 재현 |
 | 네트워크 정책 | `k8s/` | kind와 Cilium으로 웹 앱에 적용해 검증 |
 | v2의 의도된 결함 | [docs/v2-defects.md](docs/v2-defects.md) | 8개 중 5개를 다뤘습니다. 진단 보고서: [결함 1](docs/diagnosis/defect-1.md), [결함 2](docs/diagnosis/defect-2.md), [결함 3](docs/diagnosis/defect-3.md), [결함 6](docs/diagnosis/defect-6.md), [결함 8](docs/diagnosis/defect-8.md) |
 
@@ -25,19 +25,25 @@
 
 ### API의 권한 표
 
-경로마다 누가 요청하면 어떤 상태 코드가 나오는지입니다. 이 표의 칸은 `apps/api/test/permission-matrix.test.mjs`(읽기)와 `apps/api/test/enrollments-write.test.mjs`(쓰기)가 전부 요청해서 확인합니다.
+경로와 역할에 따라 응답의 상태 코드를 적은 표입니다. 이 표의 칸은 `apps/api/test/permission-matrix.test.mjs`(읽기)와 `apps/api/test/enrollments-write.test.mjs`(쓰기)가 전부 요청해서 확인합니다.
 
 | 경로 | 비로그인 | 학생 | 강사 | 관리자 |
 |---|---|---|---|---|
 | `GET /health/live`, `GET /courses` | 200 | 200 | 200 | 200 |
 | `GET /auth/me`, `GET /enrollments` | 401 | 200 | 200 | 200 |
-| `GET /enrollments/:id` | 401 | 본인의 신청 200, 다른 사용자의 신청 403 | 자기 강의의 신청 200, 다른 강의의 신청 403 | 200 |
-| `GET /courses/:id/enrollments` | 401 | 403 | 자기 강의 200, 다른 강의 403 | 200 |
+| `GET /enrollments/:id` | 401 | 본인의 신청 200, 다른 사용자의 신청 403 | 담당 강의의 신청 200, 다른 강의의 신청 403 | 200 |
+| `GET /courses/:id/enrollments` | 401 | 403 | 담당 강의 200, 다른 강의 403 | 200 |
 | `GET /admin/enrollments` | 401 | 403 | 403 | 200 |
-| `POST /enrollments` | 401 | 201 (자기 이름으로만) | 403 | 403 |
+| `POST /enrollments` | 401 | 201 (본인의 이름으로만) | 403 | 403 |
 | `DELETE /enrollments/:id` | 401 | 본인의 신청 204, 다른 사용자의 신청 403 | 403 | 204 |
 
-`GET /enrollments`는 사람마다 범위가 다릅니다. 학생은 자기 신청, 강사는 자기 강의의 신청, 관리자는 전체를 받습니다. 판단은 `apps/api/src/authz/policy.ts`의 `can()` 한 곳에서 하고, 모든 요청이 전역 Guard를 지납니다.
+`GET /enrollments`에는 API가 요청한 사람의 역할에 따라 다르게 응답합니다.
+
+- 학생: 본인의 신청
+- 강사: 담당 강의의 신청
+- 관리자: 전체 신청
+
+인가 판단은 `apps/api/src/authz/policy.ts`의 `can()` 한 곳에서 하고, 전역 Guard는 모든 요청에 적용됩니다.
 
 | 문서 | 내용 |
 |---|---|
@@ -60,27 +66,27 @@
 
 두 브랜치는 같은 의존성(`next@14.2.35`)과 같은 인증 코드를 씁니다. 코드상의 차이는 인가 코드와 그 테스트뿐이고, 문서와 CI, 네트워크 계층 검증(`k8s/`)은 `fixed`에만 있습니다.
 
-## 보는 법
+## 확인하는 방법
 ```bash
 git diff vulnerable fixed -- app lib middleware.ts   # 인가 구조가 어떻게 바뀌었는지
 git diff vulnerable fixed -- tests                   # 무엇으로 검증했는지
 ```
 
-v2의 결함은 결함마다 태그 한 쌍으로 봅니다. 지금은 결함 1~3, 6, 8의 태그가 있고, 결함을 다루는 PR마다 한 쌍씩 생깁니다.
+v2의 결함은 결함 태그(`v2-defect-N`)와 수정 태그(`v2-fix-N`) 한 쌍으로 확인합니다. 지금은 결함 1~3, 6, 8의 태그가 있습니다. 결함 하나를 다루는 PR에서 태그 한 쌍을 추가합니다.
 ```bash
 git diff v2-defect-N v2-fix-N -- apps                # 결함 N을 어떻게 고쳤는지
 git checkout v2-defect-N                             # 결함 N의 상태 재현
 ```
 
 ## 의도된 결함 (vulnerable)
-1. **역할 확인 누락 (OWASP A01 Broken Access Control)** — `/api/admin/enrollments`가 로그인 여부만 보고 역할은 보지 않음
-2. **소유자 확인 누락 (BOLA/IDOR)** — `/api/enrollments/[id]`가 요청자와 신청 소유자를 비교하지 않음
+1. **역할 확인 누락 (OWASP A01 Broken Access Control)** — `/api/admin/enrollments`가 로그인 여부만 확인하고 역할은 확인하지 않음
+2. **소유자 확인 누락 (BOLA/IDOR)** — `/api/enrollments/[id]`가 요청자의 id를 신청자의 id와 비교하지 않음
 3. **인증을 미들웨어에만 의존** — 핸들러 안에서 세션을 다시 검증하지 않음
 
 ## 인가의 전제: 세션 무결성 (두 브랜치 공통)
-인가 판단이 신뢰하는 "누가 요청했는가"가 위조되지 않도록 인증 기반을 보강했습니다. 의도된 결함과 무관하므로 두 브랜치에 똑같이 들어 있습니다.
+인가 판단은 세션이 위조되지 않았다는 것을 전제로 합니다. 그래서 세션을 위조할 수 없도록 인증을 보강했습니다. 의도된 결함과 무관하므로 두 브랜치에 똑같이 들어 있습니다.
 - `SESSION_SECRET`이 없으면 공개된 기본값으로 서명하지 않고 실패합니다(세션 위조 방지).
-- 로그인은 `application/json` request body만 받고(415), 다른 출처의 요청은 거부합니다(403). 다른 사이트의 폼으로 피해자를 공격자 계정에 로그인시키는 로그인 CSRF를 막습니다. 회귀 테스트: `apps/web/tests/login.test.mjs`
+- 로그인은 `application/json` request body만 받고(415), 다른 출처의 요청은 거부합니다(403). 다른 사이트의 폼으로 피해자를 공격자 계정에 로그인시키는 로그인 CSRF를 방어합니다. 회귀 테스트: `apps/web/tests/login.test.mjs`
 
 ## 실행
 
@@ -111,9 +117,9 @@ npm run dev     # 수동 확인
 데모 계정 (더미): `student1`/`student1-pass`, `student2`/`student2-pass`, `instructor1`/`instructor1-pass`, `instructor2`/`instructor2-pass`, `admin1`/`admin1-pass`
 
 ## 공급망 메모
-- 처음 기준 버전은 `next@14.2.24`였습니다. 이 버전에는 공개된 미들웨어 우회 보안 권고(CVE-2025-29927)가 있어, 수정 버전인 `14.2.25`로 업그레이드했습니다(커밋 "next 14.2.25로 상향"). 이 권고는 결함 3번과 같은 지점을 보여줍니다. 미들웨어가 우회되면 그 뒤의 보호도 함께 사라집니다. 이 저장소에는 해당 취약점을 재현하는 코드가 없습니다.
+- 처음 기준 버전은 `next@14.2.24`였습니다. 이 버전에는 공개된 미들웨어 우회 보안 권고(CVE-2025-29927)가 있어, 수정 버전인 `14.2.25`로 업그레이드했습니다(커밋 "next 14.2.25로 상향"). 이 미들웨어 우회는 결함 3번과 같은 문제입니다. 인증과 인가를 미들웨어에서만 하면, 미들웨어를 우회한 요청은 인증과 인가 없이 핸들러까지 갑니다. 이 저장소에는 해당 취약점을 재현하는 코드가 없습니다.
 - 이후 14.x 최신 패치인 `14.2.35`로 다시 업그레이드해 공개 권고가 36건에서 29건으로 줄었습니다(2026-10-24 기준). 이후 moderate 권고 1건이 새로 공개돼 2026-11-23 기준으로는 30건입니다. 남은 high 이상 14건은 15.5.x 이상으로 메이저 버전을 업그레이드해야 해결되므로, 권고 ID 단위로 사유와 만료일을 붙여 예외로 관리합니다(`.github/audit-exceptions.json`).
-- CI가 예외 목록에 없는 새 high 이상 권고와 만료된 예외를 막습니다. 설계와 트레이드오프: [docs/ci-hardening.md](docs/ci-hardening.md)
+- 예외 목록에 없는 high 이상 권고가 새로 나오거나 예외가 만료되면 CI가 실패합니다. 설계와 트레이드오프: [docs/ci-hardening.md](docs/ci-hardening.md)
 
 ## fixed 브랜치 요약
 
@@ -125,17 +131,17 @@ npm run dev     # 수동 확인
 
 ### 구조적 원인
 - 인가 판단이 아예 없거나, 있더라도 라우트마다 따로 분산되어 있었습니다.
-- 핸들러가 "미들웨어를 통과했다"는 사실을 인증과 인가가 모두 끝났다는 뜻으로 신뢰했습니다.
-- 미들웨어는 로그인 여부만 알 뿐, 요청한 리소스의 소유 관계를 알 수 없습니다.
+- 핸들러는 미들웨어를 통과한 요청이면 인증과 인가가 모두 끝났다고 판단하고, 세션을 다시 검증하지 않았습니다.
+- 미들웨어는 로그인 여부만 확인할 수 있고, 요청한 리소스의 소유자가 누구인지는 알 수 없습니다.
 
 ### 재발 방지 설계
-- 인가 판단은 `apps/web/lib/policy.ts`의 `can()` 한 곳에서만 합니다. 역할(RBAC)과 소유자·담당 강사(ABAC)를 보고, 명시적으로 허용한 경우 외에는 거부합니다.
+- 인가 판단은 `apps/web/lib/policy.ts`의 `can()` 한 곳에서만 합니다. `can()`은 역할(RBAC)과 소유자·담당 강사(ABAC)를 비교해, 허용 규칙에 해당하는 요청만 허용하고 그 밖의 요청은 거부합니다.
 - 모든 핸들러와 서버 컴포넌트는 `apps/web/lib/auth.ts`의 `getSession()`으로 세션을 직접 다시 검증합니다. API는 세션이 없으면 401, `can()`이 거부하면 403을 반환합니다. 페이지는 비로그인이면 로그인 화면으로 리다이렉트하고, 권한이 없으면 안내 화면을 보여줍니다.
-- 미들웨어는 미인증 요청을 앞단에서 걸러 내는 보조 수단으로만 유지했습니다.
-- 이 구조를 제로 트러스트의 정책 결정 지점(PDP)과 정책 시행 지점(PEP)으로 읽은 설계 해설: [docs/zero-trust-mapping.md](docs/zero-trust-mapping.md)
+- 미들웨어는 보조 수단으로 남겨 두었습니다. 미들웨어는 세션이 없는 요청에 핸들러보다 먼저 응답합니다. API 경로에는 401로 응답하고, 페이지는 로그인 화면으로 리다이렉트합니다.
+- 이 구조가 제로 트러스트의 정책 결정 지점(PDP)과 정책 시행 지점(PEP)에 어떻게 해당하는지는 다음 문서에 적었습니다: [docs/zero-trust-mapping.md](docs/zero-trust-mapping.md)
 
 ### 검증
-- `npm test` 29건 통과, 0건 실패 (정책 단위 16건 + 권한 매트릭스 10건 + 로그인 요청 형식·출처 검사 3건)
+- `npm test` 29건 통과, 0건 실패 (정책 단위 16건 + 권한 매트릭스 10건 + 로그인 CSRF 방어 3건)
 - 오류 응답 점검 (`next start`로 로컬 실행, 2026-10-24): response body에 스택 트레이스나 파일 경로가 노출되지 않음
 
 | 요청 | 응답 |
@@ -170,9 +176,9 @@ flowchart LR
   api["쿠버네티스<br/>API 서버"]
 
   gateway == "허용<br/>앱이 200 · 401 · 403 응답" ==> app
-  bystander -. "차단<br/>보내는 쪽 정책" .-x app
-  outsider -. "차단<br/>받는 쪽 정책" .-x app
-  app -. "차단<br/>나가는 허용 없음" .-x api
+  bystander -. "차단<br/>Egress 정책" .-x app
+  outsider -. "차단<br/>Ingress 정책" .-x app
+  app -. "차단<br/>Egress 허용 없음" .-x api
 
   classDef allow fill:#d1f5dd,stroke:#1a7f37,color:#0b3d1b
   classDef deny fill:#ffe1e0,stroke:#cf222e,color:#5c0a10
@@ -188,9 +194,12 @@ flowchart LR
   linkStyle 1,2,3 stroke:#cf222e,stroke-width:2px
 ```
 
-초록 실선은 허용된 경로, 빨간 점선은 네트워크 정책이 차단하는 경로입니다. 앱에서 `gateway`로 나가는 연결도 차단되며, 그림에서는 생략했습니다.
+- 초록색 실선 화살표는 네트워크 정책이 허용하는 연결을 나타냅니다.
+- 빨간색 점선 화살표는 네트워크 정책이 차단하는 연결을 나타냅니다.
 
-정책은 표준 `NetworkPolicy` 3장입니다(`k8s/policies/`). 네임스페이스의 모든 파드는 들어오는 것도 나가는 것도 막고, `gateway → enroll-app:3000` 한 경로만 보내는 쪽과 받는 쪽에서 엽니다. 앱에는 나가는 허용이 없습니다. 정책 적용과 차단 기록은 Cilium과 Hubble이 맡습니다.
+네트워크 정책은 앱에서 `gateway`로 나가는 연결도 차단합니다. 이 연결은 그림에 그리지 않았습니다.
+
+정책은 표준 `NetworkPolicy` 3장입니다(`k8s/policies/`). 네임스페이스의 모든 파드에 Ingress와 Egress를 기본 거부로 두고, `gateway → enroll-app:3000` 한 경로만 `gateway`의 Egress와 `enroll-app`의 Ingress에서 허용합니다. `enroll-app`에는 Egress 허용 규칙이 없어서, 앱에서 나가는 연결은 모두 차단됩니다. 정책 적용과 차단 기록은 Cilium과 Hubble이 맡습니다.
 
 ### 실행
 docker, kind v0.33.0, kubectl, Cilium CLI v0.20.1이 필요합니다.
@@ -203,7 +212,7 @@ node k8s/verify/run.mjs     # 기준선 → 정책 적용 → 매트릭스 → H
 ### 결과
 정책을 적용하기 전에는 유효한 관리자 계정으로 보낸 요청이 `bystander`와 `outsider`에서도 200을 받고, 앱은 쿠버네티스 API 서버에 연결됩니다. 정책을 적용한 뒤의 결과는 다음과 같습니다.
 
-| 출발지 | 사용자 | 요청 | 결과 | 막은 계층 |
+| 출발지 | 사용자 | 요청 | 결과 | 차단한 계층 |
 |---|---|---|---|---|
 | `gateway` | 비로그인 | 관리자 API | 401 | 앱 |
 | `gateway` | student1 | 관리자 API | 403 | 앱 |
@@ -211,32 +220,32 @@ node k8s/verify/run.mjs     # 기준선 → 정책 적용 → 매트릭스 → H
 | `gateway` | student1 | 다른 사용자의 신청 | 403 | 앱 |
 | `gateway` | instructor1 | 다른 강사 강의의 신청 | 403 | 앱 |
 | `gateway` | admin1 | 관리자 API | 200 | — |
-| `bystander` | admin1 | 관리자 API | 시간 초과 | 네트워크 (보내는 쪽 정책) |
-| `outsider` | admin1 | 관리자 API | 시간 초과 | 네트워크 (받는 쪽 정책) |
+| `bystander` | admin1 | 관리자 API | 시간 초과 | 네트워크 (Egress 정책) |
+| `outsider` | admin1 | 관리자 API | 시간 초과 | 네트워크 (Ingress 정책) |
 | `enroll-app` | — | 쿠버네티스 API 서버로 연결 | 시간 초과 | 네트워크 |
 | `enroll-app` | — | `gateway` 3000번으로 연결 | 시간 초과 | 네트워크 |
 
 - 유효한 관리자 계정으로 보낸 요청이라도 허용되지 않은 출발지에서 오면 앱에 도달하지 못합니다. 허용된 출발지에서 온 요청이라도 권한이 없으면 앱의 정책 함수가 거부합니다.
 - 시간 초과만으로는 정책 때문인지 알 수 없어서, 네트워크에서 차단된 네 줄이 Hubble에 정책 거부(`POLICY_DENIED`)로 남았는지와 차단 방향을 함께 확인합니다.
-- 서버가 없는 포트로의 연결은 정책 전에는 즉시 거절(`REFUSED`)되고, 정책 후에는 응답 없이 시간 초과가 됩니다. 닫힌 포트와 정책 차단이 다르게 보입니다.
+- 서버가 없는 포트에 TCP로 연결하면, 정책을 적용하기 전에는 즉시 거절(`REFUSED`)되고 적용한 뒤에는 응답 없이 시간 초과가 됩니다. Cilium이 패킷을 응답 없이 폐기하기 때문입니다. 그래서 닫힌 포트와 정책 차단을 구분할 수 있습니다.
 
 ### 확인한 범위
 - 로컬(arm64, 2026-11-15): 클러스터를 지우고 처음부터 실행해 기준선 4건, 두 계층 매트릭스 10건, Hubble 기록 4건이 모두 기대와 일치.
 - GitHub Actions 러너(amd64, 2026-11-15): pull request 실행에서 `netpol` 잡 통과.
-- 기본 거부 정책에서 나가는 방향을 일부러 뺐을 때 4건이 어긋나 종료 코드 1로 끝나는 것을 로컬에서 확인.
+- 기본 거부 정책에서 Egress를 일부러 뺐을 때 4건이 어긋나 종료 코드 1로 끝나는 것을 로컬에서 확인.
 
 ## 한계
 - 데이터는 인메모리이고 세션은 서명 쿠키입니다. 감사 로그와 저장 데이터 암호화는 없습니다.
 - 세션은 서명 쿠키라 만료(1시간) 전에 즉시 폐기할 수 없습니다.
-- 비밀번호 해시(scrypt)에 모든 사용자가 같은 솔트를 쓰고, 없는 아이디일 때는 해시를 계산하지 않아 응답 시간으로 아이디 존재 여부를 추정할 수 있으며, 로그인 시도 횟수 제한이 없습니다.
+- 비밀번호 해시(scrypt)는 모든 사용자가 같은 솔트를 씁니다. 존재하지 않는 아이디로 로그인을 시도하면 해시 계산을 건너뛰기 때문에 응답 시간이 더 짧습니다. 이 차이로 아이디가 존재하는지 추정할 수 있습니다. 로그인 시도 횟수 제한은 없습니다.
 - `/api/enrollments/[id]`는 존재 여부(404)를 권한 확인(403)보다 먼저 판단하므로, 로그인한 사용자가 신청 id의 존재 여부를 구분할 수 있습니다. 이 트레이드오프는 [docs/zero-trust-mapping.md](docs/zero-trust-mapping.md)의 4절에 판단 사항으로 기록했습니다.
 - 네트워크 계층 검증은 단일 노드 로컬 클러스터(kind)에서 했습니다.
-  - 정책은 주소와 포트 수준(L3/L4)입니다. 어떤 사용자가 어떤 경로를 요청했는지는 네트워크 정책이 보지 못하고, 그 판단은 앱의 `can()`이 합니다.
+  - 정책은 주소와 포트 수준(L3/L4)입니다. 네트워크 정책은 어떤 사용자가 어떤 경로를 요청했는지 확인할 수 없습니다. 사용자와 경로에 따른 판단은 앱의 `can()`이 합니다.
   - `gateway`는 허용된 출발지를 나타내는 빈 파드입니다. 실제 게이트웨이처럼 인증이나 라우팅을 하지 않습니다.
   - 요청을 서비스 이름이 아니라 서비스 IP로 보내서 DNS 허용 규칙을 두지 않았습니다. 이름으로 호출하는 구성이라면 DNS 허용이 추가로 필요합니다.
   - 구간 암호화(mTLS 등), 노드가 여러 개인 경우, 정책 변경이 반영되는 시간, 처리량과 지연은 확인하지 않았습니다.
   - 노드(kubelet)가 보내는 준비 상태 확인이 정책 아래에서 어떻게 처리되는지는 따로 검증하지 않았습니다.
-- 관리자 페이지(`/admin`)는 권한이 없을 때 "403 접근 권한 없음" 안내 화면을 HTTP 200으로 보여줍니다. 데이터는 노출되지 않지만 상태 코드는 거부를 나타내지 않습니다. API 라우트는 403을 반환합니다.
+- 관리자 페이지(`/admin`)는 권한이 없을 때 "403 접근 권한 없음" 안내 화면을 HTTP 200으로 보여줍니다. 데이터는 노출되지 않지만, 상태 코드만으로는 거부됐는지 알 수 없습니다. API 라우트는 403을 반환합니다.
 
 ---
 작성: Claude Code 보조 · 검증: 테스트와 응답 점검을 직접 실행해 확인

@@ -1,22 +1,23 @@
 import type { AuthUser } from '../auth/current-user.js';
 
-// 인가 판단은 여기 한 곳에서만 한다. 명시적으로 허용한 경우 외에는 거부한다.
-// v1(apps/web/lib/policy.ts)의 규칙을 그대로 옮기고, API에 새로 생긴 행위를 더했다.
+// 인가 판단은 이 파일의 can()에서만 한다. can()은 아래 규칙이 허용한 경우에만 true를 반환하고, 그 밖에는 false를 반환한다.
+// v1(apps/web/lib/policy.ts)의 규칙을 그대로 옮기고, API에 새로 추가한 행위의 규칙을 추가했다.
 //
 // 규칙은 두 종류다.
-// - 역할 규칙: 사용자의 역할만 본다. (관리자 목록은 admin만)
-// - 속성 규칙: 사용자와 대상의 속성을 비교한다. (학생은 신청의 소유자일 때, 강사는 그 강의의 담당 강사일 때)
+// - 역할 규칙: 사용자의 역할(user.role)만 비교한다. 예: admin:read는 admin만 허용한다.
+// - 속성 규칙: 사용자의 id와 대상의 속성(ownerId, instructorId)을 비교한다.
+//   예: 학생은 resource.ownerId === user.id일 때, 강사는 resource.instructorId === user.id일 때 허용한다.
 export type Action =
   | 'enrollment:read' // 신청 한 건 조회
-  | 'enrollment:list' // 자기가 볼 수 있는 신청 목록
+  | 'enrollment:list' // 요청한 사람이 조회할 수 있는 신청 목록
   | 'roster:read' // 강의 하나의 수강생 명단
   | 'enrollment:create' // 신청 생성
   | 'enrollment:cancel' // 신청 한 건 취소
   | 'admin:read' // 전체 신청 목록
-  | 'self:read'; // 자기 id와 역할
+  | 'self:read'; // 본인의 id와 역할
 
-// 신청의 소유자(ownerId)와 그 강의의 담당 강사(instructorId). 호출하는 쪽이 DB에서 읽어 채운다.
-// 대상이 강의이면 소유자가 없으므로 instructorId만 채운다.
+// can()이 비교하는 대상의 속성이다. ownerId는 신청자의 id이고, instructorId는 그 신청의 강의를 담당하는 강사의 id다.
+// 인가 Guard가 DB에서 읽어 can()에 넘긴다. 대상이 강의이면 신청자가 없으므로 instructorId만 넘긴다.
 export type Resource = { ownerId?: string; instructorId: string };
 
 const ROLES: readonly string[] = ['student', 'instructor', 'admin'];
@@ -38,15 +39,15 @@ export function can(user: AuthUser | null, action: Action, resource?: Resource):
       if (user.role === 'instructor') return resource.instructorId === user.id;
       return false;
     case 'enrollment:create':
-      // 신청은 학생이 자기 이름으로만 만든다. 강사와 관리자의 대리 신청은 없다.
+      // 신청은 student만 할 수 있다. 강사와 관리자가 학생 대신 신청하는 기능은 없다.
       return user.role === 'student';
     case 'enrollment:cancel':
-      // 취소는 그 신청의 소유자와 관리자만 한다. 담당 강사는 조회만 할 수 있다.
+      // 취소는 신청자와 관리자만 한다. 담당 강사는 조회만 할 수 있다.
       if (user.role === 'admin') return true;
       if (!resource) return false;
       return user.role === 'student' && resource.ownerId === user.id;
     case 'roster:read':
-      // 명단에는 그 강의 수강생 전원의 전화번호가 있다. 학생에게는 주지 않는다.
+      // 명단에는 그 강의 수강생 전원의 전화번호가 들어 있다. 그래서 학생의 요청은 허용하지 않는다.
       if (user.role === 'admin') return true;
       if (!resource) return false;
       return user.role === 'instructor' && resource.instructorId === user.id;
@@ -55,8 +56,9 @@ export function can(user: AuthUser | null, action: Action, resource?: Resource):
   }
 }
 
-// 목록 조회에 쓰는 범위. can(user, 'enrollment:read', 신청)이 참인 신청만 고르는 조건이다.
-// 규칙이 바뀌면 can()과 함께 여기도 바꾼다(둘이 같은 결과를 내는지는 e2e 테스트가 확인한다).
+// 신청 목록을 조회할 때 DB 쿼리에 포함하는 조건이다. can(user, 'enrollment:read', 신청)이 true인 신청만 고른다.
+// enrollment:read 규칙을 변경하면 enrollmentScope()도 함께 변경한다.
+// 두 함수의 결과가 같은지는 permission-matrix.test.mjs가 확인한다.
 export type EnrollmentScope = { userId: string } | { course: { instructorId: string } } | Record<string, never>;
 
 export function enrollmentScope(user: AuthUser): EnrollmentScope | null {

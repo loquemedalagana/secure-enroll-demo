@@ -1,4 +1,5 @@
-// 신청 조회 테스트 (HTTP 수준, 실제 PostgreSQL)
+// 신청 조회 테스트
+// API를 띄우고 HTTP 요청을 보낸다(앱 계층, L7). DB는 실제 PostgreSQL을 쓴다.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { bearerFor, startServer } from './helpers.mjs';
@@ -18,7 +19,7 @@ after(async () => {
 const get = (path, authorization) => fetch(`${server.base}${path}`, { headers: authorization ? { authorization } : {} });
 const ids = async (res) => (await res.json()).map((e) => e.id);
 
-test('내 신청 목록: 학생은 자기 신청만', async () => {
+test('내 신청 목록: 학생은 본인의 신청만', async () => {
   const res = await get('/enrollments', auth.student1);
   assert.equal(res.status, 200);
   assert.equal(res.headers.get('cache-control'), 'no-store');
@@ -26,7 +27,7 @@ test('내 신청 목록: 학생은 자기 신청만', async () => {
   assert.deepEqual(await ids(await get('/enrollments', auth.student2)), ['e2', 'e3']);
 });
 
-test('내 신청 목록: 강사는 자기 강의의 신청만, 관리자는 전체', async () => {
+test('내 신청 목록: 강사는 담당 강의의 신청만, 관리자는 전체', async () => {
   assert.deepEqual(await ids(await get('/enrollments', auth.instructor1)), ['e1', 'e2']);
   assert.deepEqual(await ids(await get('/enrollments', auth.instructor2)), ['e3']);
   assert.deepEqual(await ids(await get('/enrollments', auth.admin1)), ['e1', 'e2', 'e3']);
@@ -42,12 +43,12 @@ test('신청 한 건: 학생은 본인의 신청 200, 다른 사용자의 신청
   assert.deepEqual(await others.json(), { error: 'forbidden' });
 });
 
-test('신청 한 건: 강사는 자기 강의의 신청 200, 다른 강사 강의의 신청 403', async () => {
+test('신청 한 건: 강사는 담당 강의의 신청 200, 다른 강사 강의의 신청 403', async () => {
   assert.equal((await get('/enrollments/e1', auth.instructor1)).status, 200);
   assert.equal((await get('/enrollments/e3', auth.instructor1)).status, 403);
 });
 
-test('신청 한 건: 관리자는 모두 200, 없는 id는 404', async () => {
+test('신청 한 건: 관리자는 모두 200, 존재하지 않는 id는 404', async () => {
   assert.equal((await get('/enrollments/e3', auth.admin1)).status, 200);
   const missing = await get('/enrollments/no-such-id', auth.admin1);
   assert.equal(missing.status, 404);
