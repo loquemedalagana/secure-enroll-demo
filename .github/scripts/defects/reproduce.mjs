@@ -5,7 +5,7 @@
 //   먼저 <폴더>/apps/api에서 설치, 빌드, 마이그레이션, 시드를 끝내야 한다.
 //   DATABASE_URL과 TOKEN_SECRET은 환경 변수로 받는다. 포트는 REPRODUCE_PORT(기본 4000)다.
 //   판정이 기대와 다르면 종료 코드 1, 서버를 띄우지 못하면 2로 끝난다.
-// 서버의 출력은 임시 파일로만 받고 화면에 옮기지 않는다. 결함 3의 상태에서는 그 안에 토큰과 비밀번호가 있다.
+// 스크립트는 서버 로그를 임시 파일에만 저장하고 화면에 출력하지 않는다. 결함 3이 있는 코드에서는 API가 토큰과 비밀번호를 서버 로그에 기록하기 때문이다.
 import { spawn, spawnSync } from 'node:child_process';
 import { appendFileSync, existsSync, mkdtempSync, openSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -74,7 +74,8 @@ function stop() {
 
 if (!(await waitUntilUp())) {
   await stop();
-  // 아직 요청을 보내기 전이라 서버 출력에 요청의 값은 없다. 시작 실패의 원인을 보려고 끝부분만 옮긴다.
+  // 스크립트는 API가 시작되지 않았을 때 서버 로그의 마지막 20줄을 화면에 출력한다. API가 시작되지 않은 이유를 확인하는 데 필요하기 때문이다.
+  // 스크립트가 그때까지 API에 보낸 요청은 GET /health/live뿐이어서, 이 20줄에는 토큰과 비밀번호가 없다.
   console.error(readFileSync(logPath, 'utf8').split('\n').slice(-20).join('\n'));
   fail(`${tag}의 서버가 시작되지 않았습니다.`);
 }
