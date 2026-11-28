@@ -94,14 +94,14 @@ API가 요청 하나를 처리하는 동안 서버 로그에 기록하는 코드
 
 ```mermaid
 flowchart LR
-  req1(["POST /auth/login<br/>body에 비밀번호"])
+  req1(["POST /auth/login<br/>request body에 비밀번호"])
   req2(["GET /auth/me<br/>헤더에 토큰"])
 
   subgraph api["API"]
-    g["인증 Guard<br/>헤더를 출력"]
-    h1["로그인 핸들러<br/>body를 출력"]
+    g["인증 Guard<br/>헤더를 서버 로그에 기록함"]
+    h1["로그인 핸들러<br/>request body를<br/>서버 로그에 기록함"]
     h2["본인 정보 핸들러"]
-    m["요청 로그<br/>메서드, 주소, 상태, 시간"]
+    m["요청 로그<br/>메서드, 주소, 상태 코드,<br/>요청을 처리하는 데 걸린 시간"]
   end
 
   log[("서버 로그")]
@@ -156,9 +156,9 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  r1(["POST /auth/login<br/>body에 비밀번호"])
+  r1(["POST /auth/login<br/>request body에 비밀번호"])
   r2(["GET /auth/me<br/>헤더에 유효한 토큰"])
-  r3(["GET /auth/me<br/>헤더에 틀린 토큰"])
+  r3(["GET /auth/me<br/>헤더에 유효하지 않은 토큰"])
 
   subgraph api["API"]
     h1["로그인 핸들러"]
@@ -173,8 +173,8 @@ flowchart LR
   h1 == "비밀번호" ==> log
   g == "토큰" ==> log
 
-  t1["테스트 1 (기존)<br/>로그에 비밀번호가 없는가"] -.- h1
-  t2["테스트 2 (추가)<br/>로그에 토큰이 없는가<br/>유효한 것, 틀린 것"] -.- g
+  t1["테스트 1 (기존)<br/>서버 로그에 비밀번호가 없는가"] -.- h1
+  t2["테스트 2 (추가)<br/>서버 로그에 토큰이 없는가<br/>유효한 토큰, 유효하지 않은 토큰"] -.- g
 
   classDef danger fill:#FCEBEB,stroke:#A32D2D,color:#501313
   classDef test fill:#E6F1FB,stroke:#185FA5,color:#0C2D50
@@ -323,11 +323,11 @@ flowchart LR
 
   subgraph api["API"]
     direction LR
-    l1["요청 로그 ①<br/>시작 시각과<br/>요청 id를 기억<br/>응답이 끝나면<br/>실행할 함수를 등록"]
-    a["인증 Guard<br/>토큰을 검증하고<br/>사용자를 확인해<br/>요청에 붙여 둠"]
-    z["인가 Guard<br/>can()을 호출"]
+    l1["요청 로그 ①<br/>요청이 들어온 시각과<br/>요청 id를 정함<br/>응답이 끝나면<br/>실행할 함수를 등록함"]
+    a["인증 Guard<br/>토큰 확인<br/>req.user = user"]
+    z["인가 Guard<br/>권한 확인 · can()"]
     h["핸들러"]
-    l2["요청 로그 ②<br/>응답이 끝나면<br/>①에서 등록한<br/>함수가 실행됨"]
+    l2["요청 로그 ②<br/>응답이 끝나면<br/>①에서 등록한 함수가<br/>서버 로그에 한 줄을 기록함"]
     l1 --> a --> z --> h --> l2
   end
 
