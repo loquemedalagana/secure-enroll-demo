@@ -118,6 +118,7 @@ flowchart LR
 - 빨간색 상자는 request body의 `userId`를 신청자로 쓰는 신청 생성 핸들러를 나타냅니다.
 - 빨간색 화살표는 request body의 `userId`가 `enrollments` 테이블에 저장되는 흐름을 나타냅니다.
 - 초록색 상자는 정상으로 동작하는 인증 Guard와 인가 Guard를 나타냅니다.
+- 회색 상자는 `enrollments` 테이블을 나타냅니다.
 
 ### 3.1 원인 코드
 
@@ -176,6 +177,7 @@ flowchart LR
 - 빨간색 화살표는 request body의 `userId`가 `enrollments` 테이블에 저장되는 흐름을 나타냅니다.
 - 초록색 상자는 정상으로 동작하는 인증 Guard와 인가 Guard를 나타냅니다.
 - 파란색 상자는 테스트를 나타냅니다.
+- 회색 상자는 `enrollments` 테이블을 나타냅니다.
 
 | 테스트 | 보내는 요청 | 개발 관점: 무엇을 확인하나 | 보안 관점: 무엇을 지키나 |
 |---|---|---|---|
