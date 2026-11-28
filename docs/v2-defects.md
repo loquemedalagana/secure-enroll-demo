@@ -81,7 +81,7 @@ git checkout v2-defect-N                  # 결함 상태 재현
 - **어떻게 생기는가**: 인가 Guard를 추가하면서, 인증 Guard와 인가 Guard를 전역(`APP_GUARD`)으로 등록하던 것을 컨트롤러마다 `@UseGuards`로 붙이는 방식으로 바꿉니다. 새로 만든 관리자 컨트롤러(`AdminController`)에는 `@UseGuards`를 붙이지 않습니다. 그 결과 API는 `GET /admin/enrollments` 요청에 토큰 확인 없이 응답합니다. 핸들러에 `@Authorize('admin:read')`가 붙어 있지만, 이 컨트롤러에는 인가 Guard가 적용되지 않아서 `can()`이 호출되지 않습니다.
 - **왜 위험한가**: 전체 신청 목록(`GET /admin/enrollments`)의 응답에는 모든 신청자의 전화번호가 들어 있습니다. 컨트롤러마다 `@UseGuards`를 붙이는 방식에서는, `@UseGuards`를 붙이지 않은 컨트롤러의 경로가 모두 공개 경로가 됩니다. 관리자로 로그인해서 요청하면 목록이 정상으로 나오므로, 토큰 없이 요청하는 테스트가 없으면 이 결함을 발견하지 못합니다.
 - **수정 방향**: 인증 Guard와 인가 Guard를 `APP_GUARD`로 전역 등록합니다. 공개 경로의 핸들러에만 `@Public`을 붙입니다.
-- **검증 테스트**: 토큰 없이 `GET /admin/enrollments` → 401, 학생 토큰으로 → 403. 등록된 모든 경로에 토큰 없이 요청해 `@Public`이 아닌 경로가 모두 401인지 확인하는 테스트 1건.
+- **검증 테스트**: 토큰 없이 `GET /admin/enrollments` → 401, 학생 토큰으로 → 403. API의 모든 경로에 토큰 없이 요청해 `@Public`이 아닌 경로가 모두 401인지 확인하는 테스트 1건.
 - **브랜치**: `v2/05-authorization`
 
 ### 결함 2. 경로의 앞부분만 비교해 공개 여부를 판단 (인증 누락)
