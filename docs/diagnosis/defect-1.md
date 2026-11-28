@@ -136,7 +136,7 @@ flowchart LR
   s3 -. "아니요" .-> r403(["403"])
   req == "Guard가 적용되지 않으면 (결함 1)" ==> h
 
-  t3["테스트 3<br/>등록된 모든 경로에<br/>Guard가 적용되는가"] -.- s1
+  t3["테스트 3<br/>API의 모든 경로에<br/>Guard가 적용되는가"] -.- s1
   t1["테스트 1<br/>토큰 없이 401"] -.- r401
   t2["테스트 2<br/>학생과 강사는 403"] -.- r403
 
@@ -156,11 +156,11 @@ flowchart LR
 |---|---|---|
 | 1 토큰 없이 401 | API가 토큰 없는 요청에 401과 `{ "error": "unauthorized" }`로 응답하는지 | 인증. 시행 지점(PEP)이 이 경로에 있는가 |
 | 2 학생과 강사는 403, 관리자는 200 | API가 학생과 강사의 요청에 403으로, 관리자의 요청에 200으로 응답하는지 | 인가, RBAC. `can()`은 `admin:read`를 `user.role === 'admin'`일 때만 허용합니다([`authz/policy.ts` 28~29행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/authz/policy.ts#L28-L29)) |
-| 3 등록된 모든 경로 | 서버가 등록한 경로 중 공개 경로 목록(`PUBLIC_ROUTES`)에 없는 모든 경로에서, API가 토큰 없는 요청에 401로 응답하는지 | 시행 지점(PEP)이 적용되지 않은 경로가 없는가 |
+| 3 API의 모든 경로 | 서버가 등록한 경로 중 공개 경로 목록(`PUBLIC_ROUTES`)에 없는 모든 경로에서, API가 토큰 없는 요청에 401로 응답하는지 | 시행 지점(PEP)이 적용되지 않은 경로가 없는가 |
 
 결함 상태(`v2-defect-1`)에서는 세 건이 모두 실패합니다. 세 건이 실패한 원인은 하나입니다. 관리자 컨트롤러에는 Guard가 적용되지 않아서 1~3단계의 코드가 실행되지 않습니다. `can()`을 Guard 없이 직접 호출하는 단위 테스트([`apps/api/test/policy.test.mjs` 17~28행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/test/policy.test.mjs#L17-L28))는 결함 태그에서도 통과합니다.
 
-테스트 1과 2는 이 경로 하나를 확인하고, 테스트 3은 등록된 모든 경로를 확인합니다. 컨트롤러를 추가하면 테스트 3은 추가한 컨트롤러의 경로도 확인합니다.
+테스트 1과 2는 이 경로 하나를 확인하고, 테스트 3은 API의 모든 경로를 확인합니다. 컨트롤러를 추가하면 테스트 3은 추가한 컨트롤러의 경로도 확인합니다.
 
 ### 3.2 보안 관점: 접근통제 구성 요소로 본 결함
 
@@ -195,7 +195,7 @@ flowchart LR
 | `GET /enrollments/:id` | 401 | 위와 같음 |
 | `GET /admin/enrollments` | 401이어야 하는데 결함 상태에서는 200 (결함 1) | [`admin.controller.ts` 5행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/enrollments/admin.controller.ts#L5-L11): `@Controller` 위에 `@UseGuards`가 없음 |
 
-표의 링크는 태그 `v2-defect-1`의 코드로 연결됩니다. Guard를 전역으로 등록하지 않았다는 것은 [`auth.module.ts` 9~10행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/auth/auth.module.ts#L9-L10)에서 확인할 수 있습니다. 실행해서 확인하려면 2절의 재현 스크립트(`node .github/scripts/defects/defect-1.mjs`)를 실행하거나, `apps/api/test/guard-coverage.test.mjs`의 "등록된 모든 경로" 테스트를 실행합니다. 이 테스트는 서버가 등록한 경로를 전부 읽어 토큰 없이 요청합니다.
+표의 링크는 태그 `v2-defect-1`의 코드로 연결됩니다. Guard를 전역으로 등록하지 않았다는 것은 [`auth.module.ts` 9~10행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/auth/auth.module.ts#L9-L10)에서 확인할 수 있습니다. 실행해서 확인하려면 2절의 재현 스크립트(`node .github/scripts/defects/defect-1.mjs`)를 실행하거나, `apps/api/test/guard-coverage.test.mjs`의 "API의 모든 경로" 테스트를 실행합니다. 이 테스트는 서버가 등록한 경로를 전부 읽어 토큰 없이 요청합니다.
 
 고칠 방법은 두 가지입니다.
 
@@ -220,7 +220,7 @@ flowchart LR
 **감수하는 것**:
 
 - 컨트롤러 파일만으로는 Guard가 적용되는지 알 수 없습니다. 모듈 파일을 함께 봐야 합니다.
-- 보호해야 할 핸들러에 `@Public`을 잘못 붙이면 API는 그 경로의 요청에 토큰 확인을 건너뛰고 응답합니다. 테스트(`apps/api/test/guard-coverage.test.mjs`)에는 공개 경로 목록(`PUBLIC_ROUTES`)이 따로 있습니다. 이 목록에 없는 경로에서 API가 토큰 없는 요청에 401로 응답하지 않으면 "등록된 모든 경로" 테스트가 실패합니다.
+- 보호해야 할 핸들러에 `@Public`을 잘못 붙이면 API는 그 경로의 요청에 토큰 확인을 건너뛰고 응답합니다. 테스트(`apps/api/test/guard-coverage.test.mjs`)에는 공개 경로 목록(`PUBLIC_ROUTES`)이 따로 있습니다. 이 목록에 없는 경로에서 API가 토큰 없는 요청에 401로 응답하지 않으면 "API의 모든 경로" 테스트가 실패합니다.
 - 전역 Guard 두 개는 등록한 순서(인증 → 인가)로 실행됩니다. 순서가 바뀌면 인가 Guard가 실행될 때 `req.user`가 없어서, 인가 Guard가 `UnauthorizedException`을 던지고 API는 401로 응답합니다([`authz/authz.guard.ts` 31~32행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-fix-1/apps/api/src/authz/authz.guard.ts#L31-L32)). 순서를 잘못 등록하면 API는 공개 경로가 아닌 모든 요청에 401로 응답하고, 토큰 확인 없이 응답하는 경로는 생기지 않습니다.
 
 어느 방안을 고르든 3.1절의 결함을 잡는 테스트 3건은 그대로 둡니다.
