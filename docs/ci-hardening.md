@@ -7,25 +7,29 @@
 | 잡 | 하는 일 | 권한 |
 |---|---|---|
 | `web` (v1의 `test`) | `apps/web`에서 `npm ci` → `npm run build` → `npm test`(정책 단위 16건 + 권한 매트릭스 10건 + 로그인 CSRF 방어 3건) | `contents: read` |
-| `api` | 러너 안의 PostgreSQL(service container)에 `apps/api`의 마이그레이션과 시드를 적용하고 `npm test` 8건 실행 | `contents: read` |
+| `api` | 러너 안의 PostgreSQL(service container)에 `apps/api`의 마이그레이션과 시드를 적용하고 `npm test` 134건 실행 | `contents: read` |
 | `audit (web)`, `audit (api)` | `.github/scripts/audit-gate.mjs`로 앱별 `npm audit` 결과를 앱별 예외 목록과 대조 | `contents: read` |
 | `netpol` | 러너 안에 kind 클러스터를 만들고 `k8s/up.sh` → `k8s/verify/run.mjs`로 네트워크 정책과 앱 인가를 함께 검사. 결과 표는 작업 요약에 남김 | `contents: read` |
 
 ```mermaid
 flowchart LR
-  trig(["push · PR<br/>main, fixed"])
+  trig(["push · PR<br/>main"])
 
-  subgraph test["test · 앱 인가"]
+  subgraph web["web · 웹 테스트"]
     t1["npm ci"] --> t2["npm run build"] --> t3["npm test<br/>29건"]
   end
+  subgraph api["api · API 테스트"]
+    p1["npm ci"] --> p2["npm run build"] --> p3["PostgreSQL에<br/>마이그레이션과<br/>시드 적용"] --> p4["npm test<br/>134건"]
+  end
   subgraph audit["audit · 의존성"]
-    a1["audit-gate.mjs<br/>예외 목록과 대조"]
+    a1["audit-gate.mjs<br/>앱별 예외 목록과<br/>대조"]
   end
   subgraph netpol["netpol · 네트워크 정책"]
     n1["kind · Cilium CLI<br/>체크섬 확인"] --> n2["k8s/up.sh<br/>클러스터 · 배포"] --> n3["k8s/verify/run.mjs<br/>기준선 · 매트릭스"] --> n4["작업 요약에<br/>결과 표를 남김"]
   end
 
   trig --> t1
+  trig --> p1
   trig --> a1
   trig --> n1
 
@@ -33,22 +37,23 @@ flowchart LR
   classDef supply fill:#fff1d6,stroke:#9a6700,color:#4d2d00
   classDef net fill:#d1f5dd,stroke:#1a7f37,color:#0b3d1b
   classDef neutral fill:#f6f8fa,stroke:#57606a,color:#24292f
-  class t1,t2,t3 app
+  class t1,t2,t3,p1,p2,p3,p4 app
   class a1 supply
   class n1,n2,n3,n4 net
   class trig neutral
-  style test fill:#ffffff,stroke:#57606a,color:#24292f
+  style web fill:#ffffff,stroke:#57606a,color:#24292f
+  style api fill:#ffffff,stroke:#57606a,color:#24292f
   style audit fill:#ffffff,stroke:#57606a,color:#24292f
   style netpol fill:#ffffff,stroke:#57606a,color:#24292f
 ```
 
-세 잡은 서로 기다리지 않고 따로 실행됩니다.
+네 잡은 서로 기다리지 않고 따로 실행됩니다. `audit` 잡은 `apps/web`과 `apps/api`에 한 번씩 실행됩니다.
 
-- 파란색 상자는 앱 인가를 확인하는 단계를 나타냅니다.
+- 파란색 상자는 웹과 API를 빌드하고 테스트하는 단계를 나타냅니다.
 - 주황색 상자는 의존성을 확인하는 단계를 나타냅니다.
 - 초록색 상자는 네트워크 정책을 확인하는 단계를 나타냅니다.
 
-- 트리거: `main`, `fixed`의 push와 pull request, 그리고 Actions 탭의 수동 실행(`workflow_dispatch`). `vulnerable`은 의도된 결함 때문에 테스트 4건이 실패하는 것이 정상이라 자동 실행 대상이 아닙니다.
+- 트리거: `main`의 push와 pull request, 그리고 Actions 탭의 수동 실행(`workflow_dispatch`). `fixed` 브랜치의 push와 pull request에서는 `fixed` 브랜치에 있는 v1의 워크플로 파일이 실행됩니다. `vulnerable`은 의도된 결함 때문에 테스트 4건이 실패하는 것이 정상이라 자동 실행 대상이 아닙니다.
 - 잡을 나눠서, 하나가 실패해도 나머지 결과는 따로 보이게 했습니다.
 - `netpol` 잡의 워크플로에는 도구 설치와 스크립트 호출만 두었습니다. 내용은 로컬에서도 그대로 실행할 수 있는 `k8s/`의 스크립트에 있습니다. 클러스터는 러너와 함께 사라집니다.
 
