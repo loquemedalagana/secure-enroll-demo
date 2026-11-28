@@ -4,7 +4,7 @@ import { promisify } from 'node:util';
 const scryptAsync = promisify(scrypt) as (password: string, salt: Buffer, keylen: number) => Promise<Buffer>;
 const KEY_LENGTH = 32;
 
-// 저장 형식: scrypt$<솔트 hex>$<해시 hex>. 솔트는 사용자마다 새로 만든다.
+// 저장 형식: scrypt$<솔트 hex>$<해시 hex>. 솔트는 hashPassword를 호출할 때마다 randomBytes(16)으로 새로 만든다.
 export async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16);
   const hash = await scryptAsync(password, salt, KEY_LENGTH);
