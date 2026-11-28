@@ -74,7 +74,7 @@ test('상한보다 긴 값은 400이고, 오류 응답에 입력값이 들어 �
   assert.ok(!(await denied.text()).includes(secret));
 });
 
-test('서버 출력에 비밀번호와 토큰 값이 없음', async () => {
+test('서버 로그에 비밀번호와 토큰 값이 없음', async () => {
   const res = await login({ username: 'admin1', password: 'admin1-pass' });
   assert.equal(res.status, 200);
   const { token } = await res.json();
@@ -86,8 +86,10 @@ test('서버 출력에 비밀번호와 토큰 값이 없음', async () => {
   assert.ok(!output.includes(token));
 });
 
-// 결함 3(docs/v2-defects.md)을 잡는다. 위의 테스트는 받은 토큰을 다시 보내지 않아서 토큰 쪽을 확인하지 못한다.
-test('서버 출력에 요청으로 받은 토큰 값이 없음 (유효한 토큰, 유효하지 않은 토큰)', async () => {
+// 결함 3(docs/v2-defects.md)을 잡는다. 이 테스트는 로그인 응답으로 받은 토큰을 Authorization 헤더에 넣어 GET /auth/me를 요청한 뒤,
+// 받은 토큰이 서버 로그에 없는지 확인한다. 바로 위의 '서버 로그에 비밀번호와 토큰 값이 없음' 테스트는 토큰을 Authorization 헤더에 넣어
+// 요청하지 않아서, 인증 Guard가 헤더의 토큰을 서버 로그에 기록하는지 확인하지 못한다.
+test('서버 로그에 요청으로 받은 토큰 값이 없음 (유효한 토큰, 유효하지 않은 토큰)', async () => {
   const valid = await tokenFor('student1');
   assert.equal((await me(`Bearer ${valid}`)).status, 200);
   // 유효하지 않은 토큰도 서버 로그에 남으면 안 된다. 다른 테스트의 토큰과 겹치지 않는 값을 쓴다.
@@ -96,8 +98,8 @@ test('서버 출력에 요청으로 받은 토큰 값이 없음 (유효한 토�
 
   const output = server.output();
   // assert가 실패할 때 토큰 값을 테스트 로그에 기록하지 않도록 문구를 직접 준다.
-  assert.ok(!output.includes(valid), '유효한 토큰이 서버 출력에 있습니다');
-  assert.ok(!output.includes(wrong), '유효하지 않은 토큰이 서버 출력에 있습니다');
+  assert.ok(!output.includes(valid), '유효한 토큰이 서버 로그에 있습니다');
+  assert.ok(!output.includes(wrong), '유효하지 않은 토큰이 서버 로그에 있습니다');
 });
 
 // ---- 전역 인증 Guard ----

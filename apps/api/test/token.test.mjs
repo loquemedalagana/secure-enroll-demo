@@ -25,7 +25,7 @@ test('페이로드에는 uid와 exp만 있음(역할, 전화번호 없음)', () 
   assert.deepEqual(Object.keys(JSON.parse(Buffer.from(body, 'base64url').toString())).sort(), ['exp', 'uid']);
 });
 
-test('만료 직전까지 통과하고, 만료 시각부터 거부됨', () => {
+test('verifyToken은 만료 시각 1초 전에 검증하면 토큰을 통과시키고, 만료 시각에 검증하면 거부함', () => {
   const token = issueToken('u1', SECRET, NOW);
   assert.ok(verifyToken(token, SECRET, NOW + (TOKEN_TTL_SECONDS - 1) * 1000));
   assert.equal(verifyToken(token, SECRET, NOW + TOKEN_TTL_SECONDS * 1000), null);
