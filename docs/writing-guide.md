@@ -111,6 +111,7 @@
 | `userId` 필드 | `userId` 값 | request body 안의 항목을 가리킬 때 |
 | Ingress, Egress | 받는 쪽, 보내는 쪽 | 네트워크 정책의 방향은 영문으로 씁니다 |
 | 기댓값 | 기대 | 테스트 |
+| mock | DB를 흉내 내다 | 테스트에서 실제 구성 요소(PostgreSQL) 대신 쓰는, 미리 정한 값을 반환하는 코드. 영문 그대로 씁니다 |
 
 - 표준 용어는 풀어 쓰지 않습니다: 시행 지점(PEP), 판단(PE), RBAC, ABAC, IDOR, request body.
 - 접근통제 용어가 코드의 무엇인지는 처음 나올 때 괄호로 한 번 밝힙니다: 객체 선언(`@Authorize`의 `resource`).
