@@ -86,10 +86,10 @@ flowchart LR
   req2(["GET /admin/enrollments<br/>토큰 없음"])
 
   subgraph c1["EnrollmentsController · @UseGuards 있음"]
-    g1["인증 Guard"] --> g2["인가 Guard<br/>can() 호출"] --> h1["핸들러"]
+    g1["인증 Guard<br/>토큰 확인"] --> g2["인가 Guard<br/>권한 확인 · can()"] --> h1["핸들러"]
   end
   subgraph c2["AdminController · @UseGuards 없음"]
-    h2["핸들러<br/>@Authorize는 붙어 있지만<br/>읽는 Guard가 없음"]
+    h2["전체 신청 목록 핸들러<br/>토큰 확인과 권한 확인 없이<br/>실행됨"]
   end
 
   req1 --> g1
@@ -253,7 +253,7 @@ flowchart LR
   req3(["GET /health/live<br/>토큰 없음"])
 
   subgraph pep["전역 Guard · app.module.ts"]
-    g1["인증 Guard"] --> g2["인가 Guard<br/>can() 호출"]
+    g1["인증 Guard<br/>토큰 확인"] --> g2["인가 Guard<br/>권한 확인 · can()"]
   end
 
   req1 --> g1
