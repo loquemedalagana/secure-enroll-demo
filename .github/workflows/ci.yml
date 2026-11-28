@@ -1,7 +1,7 @@
 name: ci
 
-# 이 파일은 main의 워크플로다. v1 브랜치(fixed, vulnerable, k8s-netpol)는 각자 자기 브랜치의 워크플로 파일을 따른다.
-# workflow_dispatch는 Actions 탭에서 수동으로 다시 돌리기 위한 것이다.
+# 이 파일은 main의 워크플로다. v1 브랜치(fixed, vulnerable, k8s-netpol)에서는 그 브랜치에 있는 워크플로 파일이 실행된다.
+# workflow_dispatch는 Actions 탭에서 이 워크플로를 수동으로 다시 실행할 때 쓴다.
 on:
   push:
     branches: [main]
@@ -121,7 +121,7 @@ jobs:
           EXCEPTIONS: ${{ matrix.exceptions }}
           APP: ${{ matrix.app }}
 
-  # 네트워크 계층 검증. 러너 안에 kind 클러스터를 만들어 정책을 걸고 매트릭스를 돌린다.
+  # 네트워크 계층을 검증한다. 러너 안에 kind 클러스터를 만들어 네트워크 정책을 적용하고 매트릭스의 요청을 실행한다.
   # 클러스터는 러너와 함께 사라진다. 레지스트리 푸시나 배포는 하지 않는다.
   netpol:
     runs-on: ubuntu-24.04
