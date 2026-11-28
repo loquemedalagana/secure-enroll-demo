@@ -2,9 +2,11 @@ import { type ExecutionContext, createParamDecorator } from '@nestjs/common';
 import type { Request } from 'express';
 import type { Role } from '../generated/prisma/client.js';
 
-// 인증 Guard가 요청에 붙이는 사용자 정보. id는 토큰에서, role은 그 요청 시점의 DB에서 온다.
+// 요청한 사람의 id와 역할이다. 인증 Guard가 토큰을 검증한 뒤 req.user = user를 실행한다.
+// id는 토큰의 uid이고, role은 authenticate(token)이 DB에서 읽은 값이다.
 export type AuthUser = { id: string; role: Role };
-// 인가 Guard가 판단을 마친 요청에 붙이는 결과. 요청 로그가 읽는다.
+// can()에 넘긴 행위(action)와 can()의 결과(allowed)다. 인가 Guard가 can()을 호출한 뒤 req.authz = { action, allowed }를 실행한다.
+// requestLog가 이 값을 읽어 요청 로그에 기록한다.
 export type AuthzDecision = { action: string; allowed: boolean };
 export type AuthedRequest = Request & { user?: AuthUser; authz?: AuthzDecision };
 
