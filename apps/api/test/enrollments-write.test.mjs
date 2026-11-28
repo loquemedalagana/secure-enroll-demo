@@ -62,7 +62,7 @@ test('신청 취소: 담당 강사는 조회만 할 수 있고 취소는 403', a
   assert.ok(await exists('e1'));
 });
 
-test('신청 취소: 없는 id는 404', async () => {
+test('신청 취소: 존재하지 않는 id는 404', async () => {
   const res = await call('DELETE', '/enrollments/no-such-id', auth.admin1);
   assert.equal(res.status, 404);
   assert.deepEqual(await res.json(), { error: 'not_found' });
@@ -109,13 +109,13 @@ test('신청 생성: 토큰 없이 401, 강사와 관리자는 403', async () =>
   assert.equal(await countIn('c4'), 0);
 });
 
-test('신청 생성: 없는 강의는 404', async () => {
+test('신청 생성: 존재하지 않는 강의는 404', async () => {
   const res = await enroll('student3', 'no-such-course');
   assert.equal(res.status, 404);
   assert.deepEqual(await res.json(), { error: 'not_found' });
 });
 
-test('신청 생성: 형식이 틀린 request body는 400', async () => {
+test('신청 생성: 형식이 잘못된 request body는 400', async () => {
   assert.equal((await enroll('student3', 'c4', { phone: '01000000003' })).status, 400);
   assert.equal((await enroll('student3', 'c4', { courseId: 4 })).status, 400);
   assert.equal((await enroll('student3', 'c4', { memo: '선언하지 않은 필드' })).status, 400);

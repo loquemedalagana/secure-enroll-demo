@@ -47,7 +47,7 @@ test('신청 한 건: 강사는 담당 강의의 신청 200, 다른 강사 강�
   assert.equal((await get('/enrollments/e3', auth.instructor1)).status, 403);
 });
 
-test('신청 한 건: 관리자는 모두 200, 없는 id는 404', async () => {
+test('신청 한 건: 관리자는 모두 200, 존재하지 않는 id는 404', async () => {
   assert.equal((await get('/enrollments/e3', auth.admin1)).status, 200);
   const missing = await get('/enrollments/no-such-id', auth.admin1);
   assert.equal(missing.status, 404);
