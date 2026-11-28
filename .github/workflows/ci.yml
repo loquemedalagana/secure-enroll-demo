@@ -40,7 +40,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test 2>&1 | tee "$RUNNER_TEMP/test-output.txt"
-      # 테스트가 실패해도 요약은 쓴다. 건수와 실패한 테스트 이름만 옮긴다.
+      # 테스트가 실패해도 Summary는 쓴다. 건수와 실패한 테스트 이름만 옮긴다.
       - if: always()
         run: node ../../.github/scripts/test-summary.mjs "웹 테스트" "$RUNNER_TEMP/test-output.txt"
 
@@ -89,7 +89,7 @@ jobs:
       - run: npm run db:migrate
       - run: npm run db:seed
       - run: npm test 2>&1 | tee "$RUNNER_TEMP/test-output.txt"
-      # 테스트가 실패해도 요약은 쓴다. 건수와 실패한 테스트 이름만 옮긴다.
+      # 테스트가 실패해도 Summary는 쓴다. 건수와 실패한 테스트 이름만 옮긴다.
       - if: always()
         run: node ../../.github/scripts/test-summary.mjs "API 테스트" "$RUNNER_TEMP/test-output.txt"
 
@@ -156,7 +156,7 @@ jobs:
           echo "$bin" >> "$GITHUB_PATH"
       # 이미지 빌드, 클러스터 생성, Cilium 설치, 앱·클라이언트 배포. 로컬과 같은 스크립트다.
       - run: ./k8s/up.sh
-      # 결과 표는 작업 요약에 남는다. 한 줄이라도 기대와 다르면 실패한다.
+      # 결과 표는 Summary에 남는다. 한 줄이라도 기대와 다르면 실패한다.
       - run: node k8s/verify/run.mjs
       - name: 실패했을 때 클러스터 상태 출력
         if: failure()
