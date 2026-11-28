@@ -6,12 +6,12 @@
 | 경로 | `GET /courses/:id/enrollments` |
 | 분류 | OWASP Top 10 2025 A07 Authentication Failures / CWE-306 (중요 기능의 인증 누락) |
 | 위험도 | 높음 |
-| 해당 구성 요소 | PEP(정책 시행 지점). Guard는 모든 요청에 적용되지만, 결함 상태에서는 경로가 `/courses`로 시작하면 요청을 확인 없이 통과시키고 `can()`을 호출하지 않습니다 |
+| 해당 구성 요소 | PEP(정책 시행 지점). Guard는 모든 요청에 적용되지만, 결함 상태에서는 경로가 `/courses`로 시작하면 토큰 확인을 건너뛰고 요청을 통과시킵니다. `can()`도 호출하지 않습니다 |
 | 상태 | 조치 완료 (`v2-fix-2`) |
 
 ## 1. 요약
 
-강의 목록(`GET /courses`)을 로그인 없이 보여 주려고, Guard가 공개 여부를 판단하는 곳에 "경로가 `/courses`로 시작하면 공개"라는 조건을 넣었습니다. 그 결과 API는 똑같이 `/courses`로 시작하는 수강생 명단 요청(`GET /courses/:id/enrollments`)에도 토큰 확인 없이 응답합니다. 응답에는 그 강의 수강생 전원의 사용자 id와 전화번호가 들어 있습니다. 학생 토큰이나 다른 강의의 강사 토큰으로 요청해도 같은 응답이 옵니다.
+강의 목록(`GET /courses`)을 로그인 없이 보여 주려고, Guard가 공개 여부를 판단하는 곳에 "경로가 `/courses`로 시작하면 공개"라는 조건을 넣었습니다. 그 결과 API는 똑같이 `/courses`로 시작하는 수강생 명단 요청(`GET /courses/:id/enrollments`)에도 토큰 확인을 건너뛰고 응답합니다. 응답에는 그 강의 수강생 전원의 사용자 id와 전화번호가 들어 있습니다. 학생 토큰이나 다른 강의의 강사 토큰으로 요청해도 같은 응답이 옵니다.
 
 위험도를 높음으로 본 근거입니다.
 
@@ -131,8 +131,8 @@ flowchart LR
 
 - 초록색 상자는 Guard가 요청을 확인하는 단계와, 의도한 대로 공개한 강의 목록을 나타냅니다.
 - 노란색 상자는 Guard가 공개 여부를 판단하는 단계를 나타냅니다.
-- 빨간색 상자는 Guard의 확인 없이 실행되는 명단 핸들러와 그 응답을 나타냅니다.
-- 빨간색 화살표는 확인 없이 통과한 요청의 흐름을 나타냅니다.
+- 빨간색 상자는 Guard가 토큰 확인을 건너뛰어 실행된 명단 핸들러와 그 응답을 나타냅니다.
+- 빨간색 화살표는 Guard가 토큰 확인을 건너뛰고 통과시킨 요청의 흐름을 나타냅니다.
 
 ### 3.1 원인 코드
 
@@ -156,7 +156,7 @@ flowchart LR
 | `GET /enrollments/:id` | 신청자, 담당 강사, 관리자 | 401 | 위와 같음 |
 | `GET /admin/enrollments` | 관리자만 | 401 | 위와 같음 |
 
-앞으로 `/courses`로 시작하는 경로를 추가하면, API는 그 경로의 요청에도 토큰 확인 없이 응답합니다.
+앞으로 `/courses`로 시작하는 경로를 추가하면, API는 그 경로의 요청에도 토큰 확인을 건너뛰고 응답합니다.
 
 ### 3.3 이 결함을 처음 잡은 테스트
 
@@ -225,7 +225,7 @@ flowchart LR
 | 2 학생은 403 | API가 그 강의를 신청한 학생의 요청에 403으로 응답하는지 | 인가, RBAC. `can()`은 역할이 `admin`이나 `instructor`가 아닌 요청을 거부합니다([`authz/policy.ts` 40~42행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/authz/policy.ts#L40-L42)) |
 | 3 다른 강의의 강사는 403 | API가 다른 강의를 담당하는 강사의 요청에 403으로 응답하는지 | 인가, ABAC. `can()`은 `resource.instructorId === user.id`일 때만 허용합니다([42행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/authz/policy.ts#L42)) |
 | 4 없는 강의 id는 404 | API가 존재하지 않는 강의 id로 온 요청에 404와 `{ "error": "not_found" }`로 응답하는지 | Guard가 판단에 쓸 객체 속성(담당 강사)을 DB에서 실제로 읽는가 |
-| 5 공개는 강의 목록 하나뿐 | 토큰 없이 요청했을 때 API가 200으로 응답하는 경로가 `GET /courses` 하나뿐인지. `/courses`로 시작하는 경로 4개를 더 요청해 확인합니다 | 시행 지점(PEP)이 `GET /courses`가 아닌 요청을 토큰 확인 없이 통과시키지 않는가 |
+| 5 공개는 강의 목록 하나뿐 | 토큰 없이 요청했을 때 API가 200으로 응답하는 경로가 `GET /courses` 하나뿐인지. `/courses`로 시작하는 경로 4개를 더 요청해 확인합니다 | 시행 지점(PEP)이 `GET /courses`가 아닌 요청에서 토큰 확인을 건너뛰지 않는가 |
 
 테스트 2와 3의 응답은 둘 다 403이지만 `can()`이 거부하는 규칙이 다릅니다.
 
@@ -255,7 +255,7 @@ flowchart LR
 | 객체 | 강의 하나의 수강생 명단. `can()`은 그 강의의 `instructorId`를 요청한 사람의 id와 비교합니다 | 인가 Guard가 27행에서 `true`를 반환해서, `prisma.course.findUnique()`(54행)와 `resource = { instructorId: course.instructorId }`(56행)가 실행되지 않습니다. 명단 핸들러는 [21행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/courses/courses.controller.ts#L21)에서 `this.courses.roster(id)`의 결과를 반환합니다 | [`courses/courses.service.ts` 17행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/courses/courses.service.ts#L17): `roster()`. [`authz/authz.guard.ts` 51~56행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/authz/authz.guard.ts#L51-L56): `prisma.course.findUnique()`로 강의를 조회하고 `resource = { instructorId: course.instructorId }`를 실행합니다 |
 | 행위 | `roster:read`. 핸들러에 `@Authorize('roster:read', { resource: 'course' })`가 붙어 있습니다 | 인가 Guard가 `@Authorize`를 읽는 [`authz/authz.guard.ts` 33~36행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/authz/authz.guard.ts#L33-L36)이 실행되지 않습니다 | [`courses/courses.controller.ts` 18행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/courses/courses.controller.ts#L18) |
 | 판단 (PE) | `can()`. 역할이 `admin`이거나, 역할이 `instructor`이고 `resource.instructorId === user.id`일 때 허용합니다 | 인가 Guard가 `can()`을 호출하는 [59행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/authz/authz.guard.ts#L59)이 실행되지 않습니다. `can()`의 단위 테스트는 통과합니다(3.4절) | [`authz/policy.ts` 38~42행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/authz/policy.ts#L38-L42) |
-| 시행 (PEP) | 전역으로 등록한 인증 Guard와 인가 Guard. 모든 요청에 적용됩니다 | **요청은 Guard를 지나가지만, Guard는 경로가 `/courses`로 시작하면 확인 없이 통과시킵니다. 경로의 앞부분만 비교하는 이 조건이 결함이고, 그 결과 인증 없이 수강생 명단을 조회할 수 있는 취약점(인증 누락)이 생깁니다** | [`auth/is-public.ts` 7행, 15행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/auth/is-public.ts#L7-L15). `isPublic()`을 호출하는 곳은 [`auth/auth.guard.ts` 18행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/auth/auth.guard.ts#L18), [`authz/authz.guard.ts` 27행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/authz/authz.guard.ts#L27) |
+| 시행 (PEP) | 전역으로 등록한 인증 Guard와 인가 Guard. 모든 요청에 적용됩니다 | **요청은 Guard를 지나가지만, Guard는 경로가 `/courses`로 시작하면 토큰 확인을 건너뛰고 요청을 통과시킵니다. 경로의 앞부분만 비교하는 이 조건이 결함이고, 그 결과 인증 없이 수강생 명단을 조회할 수 있는 취약점(인증 누락)이 생깁니다** | [`auth/is-public.ts` 7행, 15행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/auth/is-public.ts#L7-L15). `isPublic()`을 호출하는 곳은 [`auth/auth.guard.ts` 18행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/auth/auth.guard.ts#L18), [`authz/authz.guard.ts` 27행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/authz/authz.guard.ts#L27) |
 | 접근통제 모델 | RBAC(관리자인가)와 ABAC(이 강의의 담당 강사인가) | 둘 다 적용되지 않습니다 | 판단(PE)과 같습니다. `authz/policy.ts` 40행이 RBAC, 42행이 ABAC입니다 |
 
 결함 1과 비교하면 다음과 같습니다.
@@ -274,7 +274,7 @@ flowchart LR
 
 ### 4.1 조치 방안 비교
 
-고칠 곳은 `apps/api/src/auth/is-public.ts`의 `isPublic()`입니다. 인증 Guard와 인가 Guard는 `isPublic()`이 `true`를 반환하면 토큰 확인 없이 요청을 통과시킵니다. 결함 상태의 `isPublic()`은 15행에서 `path.startsWith(prefix)`로 비교해, 요청의 주소가 `/courses`로 시작하면 `true`를 반환합니다. 여기서 주소는 요청에 적힌 URL의 경로 부분(`path`)입니다. 서버가 요청의 메서드와 주소를 등록 경로와 비교해 실행할 핸들러를 정하는 일은 URL 라우팅이라고 부릅니다. 고칠 방법은 세 가지입니다.
+고칠 곳은 `apps/api/src/auth/is-public.ts`의 `isPublic()`입니다. 인증 Guard와 인가 Guard는 `isPublic()`이 `true`를 반환하면 토큰 확인을 건너뛰고 요청을 통과시킵니다. 결함 상태의 `isPublic()`은 15행에서 `path.startsWith(prefix)`로 비교해, 요청의 주소가 `/courses`로 시작하면 `true`를 반환합니다. 여기서 주소는 요청에 적힌 URL의 경로 부분(`path`)입니다. 서버가 요청의 메서드와 주소를 등록 경로와 비교해 실행할 핸들러를 정하는 일은 URL 라우팅이라고 부릅니다. 고칠 방법은 세 가지입니다.
 
 - **방안 1 (글자가 같을 때만)**: 15행의 `path.startsWith(prefix)`를 `path === prefix`로 바꿉니다. `isPublic()`은 주소가 `/courses`와 같을 때만 `true`를 반환합니다.
 - **방안 2 (`@Public` 표시만)**: 주소를 비교하는 14~15행을 지우고 `return marked === true`만 남깁니다. `isPublic()`은 핸들러나 컨트롤러에 `@Public`이 붙어 있을 때만 `true`를 반환합니다. 강의 목록 핸들러에 `@Public()`을 붙입니다.
@@ -396,14 +396,14 @@ flowchart TB
 
 **이유**: 이 결함의 원인은 `startsWith` 하나가 아니라, Guard가 공개 여부를 요청의 주소로 판단하는 구조입니다. 요청을 핸들러로 라우팅하는 일은 서버가 합니다. Guard가 주소를 따로 비교하면, 서버의 URL 라우팅 규칙(끝의 `/`, 대소문자)을 Guard의 비교식에도 똑같이 구현해야 합니다. 방안 2에서는 Guard가 주소를 비교하지 않고, 서버가 라우팅한 핸들러에 `@Public`이 붙어 있는지만 확인합니다. 그래서 같은 핸들러로 라우팅된 요청에는 Guard의 판단이 항상 같습니다. 헬스 체크와 로그인은 이미 `@Public`을 쓰고 있습니다. 방안 2를 적용하면 공개 여부를 정하는 방법이 `@Public` 하나뿐입니다.
 
-**채택하지 않은 대안 (방안 1)**: 변경이 한 줄이고 결함을 고칩니다. 이미 운영 중인 서비스에서 급히 막아야 할 때는 방안 1을 먼저 적용하는 것이 맞습니다. 다만 방안 1에서도 Guard는 요청의 주소를 직접 비교합니다. 위 표에서는 서버가 강의 목록 핸들러로 라우팅한 `GET /courses/` 요청을 Guard가 공개 경로로 판단하지 않아서, API가 401로 응답했습니다. 반대로 인증이 필요한 핸들러로 라우팅된 요청을 Guard가 공개 경로로 판단하면, API는 그 요청에 토큰 확인 없이 응답합니다.
+**채택하지 않은 대안 (방안 1)**: 변경이 한 줄이고 결함을 고칩니다. 이미 운영 중인 서비스에서 급히 막아야 할 때는 방안 1을 먼저 적용하는 것이 맞습니다. 다만 방안 1에서도 Guard는 요청의 주소를 직접 비교합니다. 위 표에서는 서버가 강의 목록 핸들러로 라우팅한 `GET /courses/` 요청을 Guard가 공개 경로로 판단하지 않아서, API가 401로 응답했습니다. 반대로 인증이 필요한 핸들러로 라우팅된 요청을 Guard가 공개 경로로 판단하면, API는 그 요청에 토큰 확인을 건너뛰고 응답합니다.
 
 **채택하지 않은 대안 (방안 3)**: 방안 3은 서버가 라우팅한 등록 경로(`req.route.path`)를 비교하므로, 같은 핸들러로 라우팅된 요청에는 Guard의 판단이 항상 같습니다. 공개 경로도 `is-public.ts` 한 파일에 모입니다. 그런데 같은 목록이 이미 테스트(`apps/api/test/guard-coverage.test.mjs`의 `PUBLIC_ROUTES`)에 있습니다. 코드에도 목록을 두면 같은 목록을 두 곳에서 고쳐야 하고, 공개 여부를 정하는 방법도 둘(`@Public`, `PUBLIC_ROUTES`)로 남습니다.
 
 **감수하는 것**:
 
 - `@Public`이 여러 파일에 흩어져 있어서, 공개 경로를 코드 한 파일에서 확인할 수 없습니다. 그 목록은 테스트의 `PUBLIC_ROUTES`에 있습니다. `PUBLIC_ROUTES`에 없는 경로가 토큰 없는 요청에 401로 응답하지 않으면 "등록된 모든 경로" 테스트가 실패합니다.
-- 보호해야 할 핸들러에 `@Public`을 잘못 붙이면 API는 그 경로의 요청에 토큰 확인 없이 응답합니다. 이 실수도 같은 테스트가 잡습니다.
+- 보호해야 할 핸들러에 `@Public`을 잘못 붙이면 API는 그 경로의 요청에 토큰 확인을 건너뛰고 응답합니다. 이 실수도 같은 테스트가 잡습니다.
 
 ### 4.2 적용한 조치
 

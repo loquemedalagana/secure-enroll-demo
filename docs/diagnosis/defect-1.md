@@ -264,7 +264,7 @@ flowchart LR
   style pep fill:none,stroke:#0F6E56
 ```
 
-모든 요청이 같은 Guard를 지납니다. `@Public`이 붙은 경로 3개만 Guard가 확인 없이 통과시킵니다.
+모든 요청이 같은 Guard를 지납니다. `@Public`이 붙은 경로 3개에서만 Guard가 토큰 확인을 건너뛰고 요청을 통과시킵니다.
 
 ## 5. 조치 뒤 재확인
 
