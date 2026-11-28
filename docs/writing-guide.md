@@ -120,6 +120,7 @@
 | 기댓값 | 기대 | 테스트 |
 | mock | DB를 흉내 내다 | 테스트에서 실제 구성 요소(PostgreSQL) 대신 쓰는, 미리 정한 값을 반환하는 코드. 영문 그대로 씁니다 |
 | Summary | 작업 요약 | 스크립트가 `GITHUB_STEP_SUMMARY` 파일에 쓴 표와 문장을 GitHub이 실행 화면의 Summary에 잡마다 보여 줍니다. GitHub 화면에 적힌 이름을 영문 그대로 씁니다. 진단 보고서의 절 제목 "요약"은 Summary와 다른 것이므로 그대로 씁니다 |
+| ruleset | 규칙 세트 | GitHub 저장소 설정에서 브랜치나 태그에 적용하는 규칙의 묶음입니다. GitHub 화면에 적힌 이름을 영문 그대로 씁니다 |
 
 - 표준 용어는 풀어 쓰지 않습니다: 시행 지점(PEP), 판단(PE), RBAC, ABAC, IDOR, request body.
 - 영문으로 쓰는 개발 용어는 한자어로 옮기지 않고 영문 그대로 씁니다: raw 쿼리, mock, request body, prepared statement. 문장을 고칠 때 옮긴 말이 남아 있으면 문장과 함께 고칩니다.
