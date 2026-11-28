@@ -1,4 +1,5 @@
-// 강의 목록과 수강생 명단 테스트 (HTTP 수준, 실제 PostgreSQL)
+// 강의 목록과 수강생 명단 테스트
+// API를 띄우고 HTTP 요청을 보낸다(앱 계층, L7). DB는 실제 PostgreSQL을 쓴다.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { bearerFor, startServer } from './helpers.mjs';

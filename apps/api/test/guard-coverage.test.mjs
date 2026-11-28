@@ -1,4 +1,5 @@
-// Guard 적용 범위 테스트 (HTTP 수준, 실제 PostgreSQL)
+// Guard 적용 범위 테스트
+// API를 띄우고 HTTP 요청을 보낸다(앱 계층, L7). DB는 실제 PostgreSQL을 쓴다.
 // 결함 1(docs/v2-defects.md)을 잡는다: Guard가 붙지 않은 컨트롤러가 있으면 실패한다.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';

@@ -1,4 +1,5 @@
-// 권한 표 테스트 (HTTP 수준, 실제 PostgreSQL)
+// 권한 표 테스트
+// API를 띄우고 HTTP 요청을 보낸다(앱 계층, L7). DB는 실제 PostgreSQL을 쓴다.
 // 경로마다 누가 요청하면 어떤 상태 코드가 나와야 하는지를 표 하나로 적고, 칸을 전부 요청해 본다.
 // README의 권한 표와 같은 내용이다. 표를 고치면 README도 같이 고친다.
 import { test, before, after } from 'node:test';

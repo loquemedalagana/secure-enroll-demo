@@ -1,4 +1,5 @@
-// 요청 로그 테스트 (HTTP 수준, 실제 PostgreSQL)
+// 요청 로그 테스트
+// API를 띄우고 HTTP 요청을 보낸다(앱 계층, L7). DB는 실제 PostgreSQL을 쓴다.
 // API가 서버 로그에 JSON 형식으로 기록한 줄을 읽어, 요청 하나에 한 줄이고 그 줄에 정해진 필드만 있는지 확인한다.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';

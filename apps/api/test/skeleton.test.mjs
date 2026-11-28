@@ -1,4 +1,5 @@
-// API 골격 테스트 (HTTP 수준, 실제 PostgreSQL): 헬스 체크, 오류 응답 형식, 시작 조건, 시드
+// API 골격 테스트: 헬스 체크, 오류 응답 형식, 시작 조건, 시드
+// API를 띄우고 HTTP 요청을 보낸다(앱 계층, L7). DB는 실제 PostgreSQL을 쓴다.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import pg from 'pg';

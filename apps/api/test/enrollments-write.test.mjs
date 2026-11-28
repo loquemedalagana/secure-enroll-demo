@@ -1,4 +1,5 @@
-// 신청 생성·취소 테스트 (HTTP 수준, 실제 PostgreSQL)
+// 신청 생성·취소 테스트
+// API를 띄우고 HTTP 요청을 보낸다(앱 계층, L7). DB는 실제 PostgreSQL을 쓴다.
 // 이 파일의 테스트는 DB의 데이터를 변경하거나 삭제한다. 시드의 신청(e1~e3)은 삭제하지 않고, 테스트가 추가한 신청은 파일이 끝날 때 삭제한다.
 // 테스트 파일은 하나씩 차례로 실행된다(package.json의 --test-concurrency=1). 다른 테스트 파일이 신청 목록 전체를 기댓값과 비교하기 때문이다.
 import { test, before, after } from 'node:test';
