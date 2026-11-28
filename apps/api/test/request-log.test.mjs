@@ -79,7 +79,7 @@ test('요청 로그: 허용한 인가 판단도 남음 (관리자 → 전체 신
   );
 });
 
-test('요청 로그: 판단까지 가지 않은 요청에는 uid, action, allowed가 없음 (공개 경로, 401)', async () => {
+test('요청 로그: 인가 Guard가 can()을 호출하지 않은 요청에는 uid, action, allowed가 없음 (공개 경로, 401)', async () => {
   for (const [path, expected] of [['/courses', 200], ['/auth/me', 401]]) {
     const { status, added } = await logOf(path);
     assert.equal(status, expected, path);

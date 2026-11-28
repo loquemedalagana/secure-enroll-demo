@@ -1,6 +1,6 @@
 // 신청 생성·취소 테스트 (HTTP 수준, 실제 PostgreSQL)
-// 이 파일은 DB의 내용을 바꾼다. 시드의 신청(e1~e3)은 삭제하지 않고, 새로 생긴 신청은 끝날 때 삭제한다.
-// 테스트 파일은 하나씩 차례로 돈다(package.json의 --test-concurrency=1). 다른 파일이 목록 전체를 비교하기 때문이다.
+// 이 파일의 테스트는 DB의 데이터를 변경하거나 삭제한다. 시드의 신청(e1~e3)은 삭제하지 않고, 테스트가 추가한 신청은 파일이 끝날 때 삭제한다.
+// 테스트 파일은 하나씩 차례로 실행된다(package.json의 --test-concurrency=1). 다른 테스트 파일이 신청 목록 전체를 기댓값과 비교하기 때문이다.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import pg from 'pg';
@@ -68,7 +68,7 @@ test('신청 취소: 존재하지 않는 id는 404', async () => {
   assert.deepEqual(await res.json(), { error: 'not_found' });
 });
 
-test('신청 생성: 학생이 신청하면 201이고 본인의 신청 목록에 나옴', async () => {
+test('신청 생성: 학생이 신청하면 201이고, 그 신청이 본인의 신청 목록에 있음', async () => {
   const res = await enroll('student3', 'c4');
   assert.equal(res.status, 201);
   assert.equal(res.headers.get('cache-control'), 'no-store');
@@ -95,7 +95,7 @@ test('신청 취소: 본인은 204이고 삭제됨, 같은 취소를 다시 보�
   assert.equal((await call('DELETE', `/enrollments/${mine.id}`, auth.student3)).status, 404);
 });
 
-test('신청 취소: 관리자는 다른 사람의 신청도 204', async () => {
+test('신청 취소: 관리자는 다른 사용자의 신청도 204', async () => {
   const created = await (await enroll('student3', 'c4')).json();
   assert.equal((await call('DELETE', `/enrollments/${created.id}`, auth.admin1)).status, 204);
   assert.equal(await exists(created.id), false);
@@ -155,7 +155,7 @@ test('중복: 같은 학생이 같은 강의를 동시에 4번 신청하면 1건
 });
 
 test('신청 생성: request body에 userId를 넣으면 본인의 id여도 400', async () => {
-  // request body는 신청자의 id를 받지 않는다. 선언하지 않은 필드라 거부된다.
+  // 신청 생성의 DTO에는 userId가 없다. 전역 ValidationPipe가 선언하지 않은 필드가 든 이 요청을 400으로 거부한다.
   const res = await enroll('student3', 'c4', { userId: 'u3' });
   assert.equal(res.status, 400);
   assert.equal((await res.json()).error, 'bad_request');
@@ -163,8 +163,8 @@ test('신청 생성: request body에 userId를 넣으면 본인의 id여도 400'
 });
 
 // 아래 3건은 결함 8(docs/v2-defects.md)을 잡는다. 번호는 docs/diagnosis/defect-8.md 3.4절의 그림과 같다.
-// 요청한 사람(토큰)과 request body의 userId가 다른 요청을 보낸다. 거부하는 방식(400인지 403인지)은 정하지 않고,
-// 다른 사람의 이름으로 신청되지 않았는지를 DB에서 확인한다.
+// 테스트는 요청한 사람(토큰)과 request body의 userId가 다른 요청을 보낸다. API가 거부하는 방식(400인지 403인지)은 정하지 않고,
+// 다른 사용자의 이름으로 신청되지 않았는지를 DB에서 확인한다.
 const ownedBy = async (userId) =>
   Number((await db.query('select count(*) from enrollments where "userId" = $1 and id <> all($2)', [userId, SEEDED])).rows[0].count);
 const createWith = (who, userId) => call('POST', '/enrollments', auth[who], { userId, courseId: 'c4', phone: PHONE });

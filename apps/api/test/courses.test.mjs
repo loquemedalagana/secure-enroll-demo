@@ -168,7 +168,7 @@ test('수강생 명단 4: 존재하지 않는 강의 id는 404', async () => {
 
 test('수강생 명단 5: /courses로 시작하는 경로 가운데 API가 토큰 없는 요청에 200으로 응답하는 경로는 GET /courses 하나뿐임', async () => {
   assert.equal((await get('/courses')).status, 200);
-  // 등록되지 않은 경로는 404가 맞으므로 401이 아니라 "200이 아니다"로 본다.
+  // 등록되지 않은 경로에는 API가 404로 응답하는 것이 정상이다. 그래서 상태 코드가 401인지가 아니라 200이 아닌지를 확인한다.
   for (const path of ['/courses/c1/enrollments', '/courses/c1/enrollments/', '/courses/c1', '/courses/x/y']) {
     assert.notEqual((await get(path)).status, 200, path);
   }
