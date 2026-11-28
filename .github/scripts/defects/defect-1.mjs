@@ -1,4 +1,4 @@
-// 결함 1 재현: Guard가 붙지 않은 컨트롤러의 경로가 인증·인가 없이 열리는지 본다.
+// 결함 1 재현: API가 Guard가 적용되지 않은 컨트롤러의 경로에 토큰 확인 없이 응답하는지 확인한다.
 // 보고서: docs/diagnosis/defect-1.md
 import { BASE, bearerFor, describe, finish, summarize } from './lib.mjs';
 

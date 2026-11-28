@@ -8,7 +8,7 @@
 
 export const BASE = process.env.API_BASE ?? 'http://127.0.0.1:4000';
 
-// 더미 계정으로 로그인해 Authorization 헤더 값을 돌려준다. 비밀번호는 시드 규칙("<username>-pass")이다.
+// 더미 계정으로 로그인해 Authorization 헤더에 넣을 값(Bearer <토큰>)을 반환한다. 비밀번호는 시드의 규칙("<username>-pass")대로 만든다.
 export async function bearerFor(username) {
   const res = await fetch(`${BASE}/auth/login`, {
     method: 'POST',

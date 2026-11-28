@@ -1,4 +1,5 @@
-// 결함 2 재현: 로그인 없이 열지를 경로의 앞부분만 보고 정해서, 앞부분이 같은 수강생 명단까지 인증·인가 없이 열리는지 본다.
+// 결함 2 재현: Guard가 경로의 앞부분만 비교해 공개 경로인지 판단한다.
+// API가 앞부분이 같은 수강생 명단 요청에도 토큰 확인을 건너뛰고 응답하는지 확인한다.
 // 보고서: docs/diagnosis/defect-2.md
 import { BASE, bearerFor, describe, finish, summarize } from './lib.mjs';
 
