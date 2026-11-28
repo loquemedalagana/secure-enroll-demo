@@ -225,11 +225,11 @@ flowchart LR
 
 | 테스트 | 보내는 검색어 | 개발 관점: 무엇을 확인하나 | 보안 관점: 무엇을 지키나 |
 |---|---|---|---|
-| 1 작은따옴표가 든 검색어도 오류 없이 200에 0건 | `'` | API가 작은따옴표 하나인 검색어에 200과 빈 배열(`[]`)로 응답하는지 | 검색어의 작은따옴표가 SQL 문법 오류를 일으키지 않는가. 공격자는 API의 500 응답으로 검색어가 쿼리의 일부로 실행된다는 것을 확인할 수 있습니다 |
+| 1 작은따옴표가 포함된 검색어도 오류 없이 200에 0건 | `'` | API가 작은따옴표 하나인 검색어에 200과 빈 배열(`[]`)로 응답하는지 | 검색어의 작은따옴표가 SQL 문법 오류를 일으키지 않는가. 공격자는 API의 500 응답으로 검색어가 쿼리의 일부로 실행된다는 것을 확인할 수 있습니다 |
 | 2 검색어로 조건을 항상 참으로 만들 수 없음 | `암호학' OR '%'='` | API가 이 검색어에 200과 빈 배열(`[]`)로 응답하는지 | 검색어가 `WHERE` 조건을 항상 참으로 바꾸지 못하는가 (tautology 기반) |
 | 3 검색어로 사용자 테이블을 읽을 수 없음 | `… UNION SELECT … FROM users --` | API가 이 검색어에 200과 빈 배열(`[]`)로 응답하는지 | 기밀성. 공격자가 검색어로 사용자 테이블의 계정 이름과 비밀번호 해시를 읽을 수 없는가 (UNION 기반) |
 | 4 검색어로 신청 테이블을 읽을 수 없음 | `… UNION SELECT … FROM enrollments --` | API가 이 검색어에 200과 빈 배열(`[]`)로 응답하는지 | 기밀성. 공격자가 검색어로 신청 테이블의 전화번호를 읽을 수 없는가 (UNION 기반) |
-| 5 어떤 검색어든 응답의 모든 행은 제목에 그 검색어가 든 강의 | 정상 검색어 `보안`과 테스트 1~4의 검색어 4개 | API의 검색 응답이, 강의 전체 목록에서 제목에 검색어가 포함된 강의만 고른 결과와 같은지 | 기밀성. 공격자가 어떤 검색어를 보내도 강의 목록(`GET /courses`)에 없는 행을 읽을 수 없는가 |
+| 5 어떤 검색어든 응답의 모든 행은 제목에 그 검색어가 포함된 강의 | 정상 검색어 `보안`과 테스트 1~4의 검색어 4개 | API의 검색 응답이, 강의 전체 목록에서 제목에 검색어가 포함된 강의만 고른 결과와 같은지 | 기밀성. 공격자가 어떤 검색어를 보내도 강의 목록(`GET /courses`)에 없는 행을 읽을 수 없는가 |
 
 테스트 1~4는 SQL 인젝션에 쓰는 검색어를 하나씩 보내 API의 응답을 확인합니다. 테스트 5는 검색어가 무엇이든 성립해야 하는 조건을 확인합니다. 테스트 5는 `GET /courses`로 강의 전체 목록을 조회해 제목에 검색어가 포함된 강의만 고릅니다([`apps/api/test/courses.test.mjs` 90행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-fix-6/apps/api/test/courses.test.mjs#L90)). 그리고 검색 응답에 이 강의가 아닌 행이 없는지([91~92행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-fix-6/apps/api/test/courses.test.mjs#L91-L92)), 검색 응답의 건수가 고른 강의의 수와 같은지([93행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-fix-6/apps/api/test/courses.test.mjs#L93)) 확인합니다.
 
@@ -254,7 +254,7 @@ flowchart LR
 | 시행 (PEP) | 정상으로 동작합니다. 강의 목록 핸들러에 `@Public()`이 붙어 있어서, 인증 Guard와 인가 Guard는 `isPublic()`이 `true`를 반환하는 이 요청을 통과시킵니다 | [`courses/courses.controller.ts` 12행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-6/apps/api/src/courses/courses.controller.ts#L12), [`auth/auth.guard.ts` 18행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-6/apps/api/src/auth/auth.guard.ts#L18), [`authz/authz.guard.ts` 27행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-6/apps/api/src/authz/authz.guard.ts#L27) |
 | 판단 (PE) | 인가 Guard가 27행에서 `true`를 반환해서 `can()`을 호출하는 59행은 실행되지 않습니다. 공개 경로이므로 의도한 동작입니다 | [`authz/authz.guard.ts` 59행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-6/apps/api/src/authz/authz.guard.ts#L59) |
 
-결함 1과 결함 2는 시행 지점(PEP)인 Guard에 결함이 있었습니다. 결함 1에서는 관리자 컨트롤러에 Guard가 적용되지 않았고, 결함 2에서는 Guard가 토큰 확인을 건너뛰었습니다. 결함 6에서는 Guard가 정상으로 동작합니다. Guard는 요청이 라우팅된 핸들러에 붙은 `@Public`과 `@Authorize`를 읽어 요청을 통과시킬지 판단합니다. 핸들러가 실행하는 쿼리가 어느 테이블을 읽는지는 확인하지 않습니다. 신청 한 건 조회(`GET /enrollments/:id`)에서 `can()`은 신청자, 담당 강사, 관리자의 요청만 허용합니다([`authz/policy.ts` 32~37행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-6/apps/api/src/authz/policy.ts#L32-L37)). 그런데 공격자는 신청에 든 전화번호를 공개 경로인 강의 검색으로 읽을 수 있습니다.
+결함 1과 결함 2는 시행 지점(PEP)인 Guard에 결함이 있었습니다. 결함 1에서는 관리자 컨트롤러에 Guard가 적용되지 않았고, 결함 2에서는 Guard가 토큰 확인을 건너뛰었습니다. 결함 6에서는 Guard가 정상으로 동작합니다. Guard는 요청이 라우팅된 핸들러에 붙은 `@Public`과 `@Authorize`를 읽어 요청을 통과시킬지 판단합니다. 핸들러가 실행하는 쿼리가 어느 테이블을 읽는지는 확인하지 않습니다. 신청 한 건 조회(`GET /enrollments/:id`)에서 `can()`은 신청자, 담당 강사, 관리자의 요청만 허용합니다([`authz/policy.ts` 32~37행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-6/apps/api/src/authz/policy.ts#L32-L37)). 그런데 공격자는 신청 테이블에 저장된 전화번호를 공개 경로인 강의 검색으로 읽을 수 있습니다.
 
 ## 4. 조치
 
