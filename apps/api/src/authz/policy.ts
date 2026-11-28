@@ -56,7 +56,7 @@ export function can(user: AuthUser | null, action: Action, resource?: Resource):
   }
 }
 
-// 신청 목록을 조회할 때 DB 쿼리에 넣는 조건이다. can(user, 'enrollment:read', 신청)이 true인 신청만 고른다.
+// 신청 목록을 조회할 때 DB 쿼리에 포함하는 조건이다. can(user, 'enrollment:read', 신청)이 true인 신청만 고른다.
 // enrollment:read 규칙을 변경하면 enrollmentScope()도 함께 변경한다.
 // 두 함수의 결과가 같은지는 permission-matrix.test.mjs가 확인한다.
 export type EnrollmentScope = { userId: string } | { course: { instructorId: string } } | Record<string, never>;

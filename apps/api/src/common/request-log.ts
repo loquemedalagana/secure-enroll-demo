@@ -2,8 +2,8 @@ import { randomUUID } from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
 import type { AuthedRequest } from '../auth/current-user.js';
 
-// 요청 로그 한 줄에 넣는 필드는 아래의 RequestLogLine 타입에만 적는다. 이 타입에 없는 필드는 요청 로그에 넣지 않는다.
-// 헤더, request body, response body, 쿼리 문자열은 요청 로그에 넣지 않는다. 토큰, 비밀번호, 검색어가 이 네 곳에 들어 있기 때문이다.
+// 요청 로그 한 줄에 포함하는 필드는 아래의 RequestLogLine 타입에만 적는다. 이 타입에 없는 필드는 요청 로그에 포함하지 않는다.
+// 헤더, request body, response body, 쿼리 문자열은 요청 로그에 포함하지 않는다. 토큰, 비밀번호, 검색어가 이 네 곳에 들어 있기 때문이다.
 type RequestLogLine = {
   time: string;
   id: string;
@@ -20,7 +20,7 @@ type RequestLogLine = {
 export function requestLog(req: Request, res: Response, next: NextFunction): void {
   const started = Date.now();
   const id = randomUUID();
-  // 요청 로그의 id와 같은 값을 응답의 X-Request-Id 헤더에 넣는다.
+  // 요청 로그의 id와 같은 값을 응답의 X-Request-Id 헤더로 보낸다.
   // 서버에 접근할 수 있는 사람은 서버 로그에서 id가 X-Request-Id 헤더의 값과 같은 줄을 찾을 수 있다.
   res.setHeader('X-Request-Id', id);
   res.on('finish', () => {

@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
 // 토큰 형식: <페이로드 base64url>.<서명 base64url>
-// 페이로드에는 uid와 exp만 있다. 역할은 페이로드에 넣지 않고 요청마다 DB에서 읽는다. 그래서 역할을 변경하면 다음 요청부터 반영된다.
+// 페이로드에는 uid와 exp만 있다. 역할은 페이로드에 포함하지 않고 요청마다 DB에서 읽는다. 그래서 역할을 변경하면 다음 요청부터 반영된다.
 // 서명은 HMAC-SHA256이고 키는 API에만 있다.
 export const TOKEN_TTL_SECONDS = 60 * 60;
 
