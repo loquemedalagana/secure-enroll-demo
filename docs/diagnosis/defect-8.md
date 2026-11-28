@@ -91,19 +91,19 @@ node .github/scripts/defects/defect-8.mjs
 
 ```mermaid
 flowchart LR
-  req(["POST /enrollments<br/>토큰: student1<br/>body userId: u2"])
+  req(["POST /enrollments<br/>토큰: student1<br/>request body의 userId: u2"])
 
   subgraph api["API"]
-    a["인증 Guard<br/>토큰으로 u1 확인"]
-    z["인가 Guard<br/>학생의 신청 생성<br/>허용"]
-    h["신청 생성 핸들러<br/>body의 userId로<br/>저장"]
+    a["인증 Guard<br/>토큰 확인<br/>요청한 사람: u1"]
+    z["인가 Guard<br/>권한 확인 · can()<br/>학생의 신청 생성을 허용함"]
+    h["신청 생성 핸들러<br/>신청자를 request body의<br/>userId로 정함"]
   end
 
   db[("enrollments")]
 
   req --> a --> z --> h
   h == "userId: u2" ==> db
-  h --> res(["201 · u2의 신청"])
+  h --> res(["201 · u2의 이름으로 신청됨"])
 
   classDef safe fill:#E1F5EE,stroke:#0F6E56,color:#04342C
   classDef danger fill:#FCEBEB,stroke:#A32D2D,color:#501313
@@ -400,12 +400,12 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-  req(["POST /enrollments<br/>토큰: student1<br/>body: 강의,<br/>전화번호"])
+  req(["POST /enrollments<br/>토큰: student1<br/>request body:<br/>강의 id, 전화번호"])
 
   subgraph api["API"]
-    a["인증 Guard<br/>토큰으로 u1 확인"]
-    z["인가 Guard<br/>학생의 신청 생성<br/>허용"]
-    h["신청 생성 핸들러<br/>토큰의 사용자로<br/>저장"]
+    a["인증 Guard<br/>토큰 확인<br/>요청한 사람: u1"]
+    z["인가 Guard<br/>권한 확인 · can()<br/>학생의 신청 생성을 허용함"]
+    h["신청 생성 핸들러<br/>신청자를 요청한 사람으로<br/>정함"]
   end
 
   db[("enrollments")]
@@ -413,7 +413,7 @@ flowchart LR
   req --> a --> z --> h
   a -. "u1" .-> h
   h == "userId: u1" ==> db
-  h --> res(["201 · u1의 신청"])
+  h --> res(["201 · u1의 이름으로 신청됨"])
 
   classDef safe fill:#E1F5EE,stroke:#0F6E56,color:#04342C
   classDef neutral fill:#f6f8fa,stroke:#57606a,color:#24292f
