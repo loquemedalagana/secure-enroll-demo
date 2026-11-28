@@ -106,7 +106,9 @@ flowchart LR
   linkStyle 4,5 stroke:#A32D2D,stroke-width:2px
 ```
 
-초록색 상자는 Guard가 요청을 확인하는 곳, 빨간색 상자는 요청이 확인 없이 지나가는 곳입니다.
+- 초록색 상자는 Guard가 요청을 확인하는 단계와 그 결과를 나타냅니다.
+- 빨간색 상자는 Guard가 적용되지 않은 전체 신청 목록 핸들러와 그 응답을 나타냅니다.
+- 빨간색 화살표는 Guard를 거치지 않고 핸들러에 도달한 요청의 흐름을 나타냅니다.
 
 - Guard를 전역으로 등록하지 않고 컨트롤러마다 `@UseGuards(AuthGuard, AuthzGuard)`로 붙입니다([`auth/auth.controller.ts 10행`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/auth/auth.controller.ts#L10), [`enrollments/enrollments.controller.ts 8행`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/enrollments/enrollments.controller.ts#L8)).
 - 관리자 컨트롤러([`enrollments/admin.controller.ts 5행`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/enrollments/admin.controller.ts#L5))에는 `@UseGuards`가 없습니다.
@@ -146,7 +148,9 @@ flowchart LR
   linkStyle 6 stroke:#A32D2D,stroke-width:3px
 ```
 
-초록색 상자는 Guard의 확인과 그 결과이고, 파란색 상자는 테스트입니다. 빨간색 화살표는 결함 상태의 요청 흐름입니다. 결함 상태에서는 요청이 Guard를 거치지 않고 핸들러에 바로 도달합니다.
+- 초록색 상자는 Guard가 확인하는 1~3단계와 각 단계의 결과를 나타냅니다.
+- 파란색 상자는 테스트를 나타냅니다.
+- 빨간색 화살표는 결함 상태의 요청 흐름을 나타냅니다. 요청이 Guard를 거치지 않고 핸들러에 바로 도달합니다.
 
 | 테스트 | 개발 관점: 무엇을 확인하나 | 보안 관점: 무엇을 지키나 |
 |---|---|---|
@@ -154,7 +158,7 @@ flowchart LR
 | 2 학생과 강사는 403, 관리자는 200 | 역할별 토큰에 403, 403, 200 | 인가, RBAC. 판단(PE, `can()`)이 역할만 보고 정합니다 |
 | 3 등록된 모든 경로 | 서버가 등록한 경로를 전부 읽어, 공개 목록에 없는 경로가 토큰 없이 401인지 | 시행 지점을 지나지 않는 경로가 없는가 |
 
-결함 상태(`v2-defect-1`)에서는 세 건이 모두 실패합니다. 세 건이 실패한 원인은 하나입니다. 이 컨트롤러에는 Guard가 적용되지 않아서, 1~3을 확인하는 코드가 한 번도 실행되지 않습니다. 정책(`can()`)의 규칙 자체는 결함 상태에서도 학생과 강사를 거부하게 되어 있습니다.
+결함 상태(`v2-defect-1`)에서는 세 건이 모두 실패합니다. 세 건이 실패한 원인은 하나입니다. 이 컨트롤러에는 Guard가 적용되지 않아서, 1~3을 확인하는 코드가 한 번도 실행되지 않습니다. `can()`을 Guard 없이 직접 호출하는 단위 테스트([`apps/api/test/policy.test.mjs` 17~28행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/test/policy.test.mjs#L17-L28))는 결함 태그에서도 통과합니다.
 
 테스트 1과 2는 이 경로 하나를 확인하고, 테스트 3은 등록된 모든 경로를 확인합니다. 컨트롤러를 새로 추가해도 테스트 3이 그 경로까지 확인합니다.
 
