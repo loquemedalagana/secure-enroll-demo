@@ -224,15 +224,15 @@ flowchart LR
 | 1 토큰 없이 401 | API가 토큰 없는 요청에 401과 `{ "error": "unauthorized" }`로 응답하는지 | 인증 |
 | 2 학생은 403 | API가 그 강의를 신청한 학생의 요청에 403으로 응답하는지 | 인가, RBAC. `can()`은 역할이 `admin`이나 `instructor`가 아닌 요청을 거부합니다([`authz/policy.ts` 40~42행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/authz/policy.ts#L40-L42)) |
 | 3 다른 강의의 강사는 403 | API가 다른 강의를 담당하는 강사의 요청에 403으로 응답하는지 | 인가, ABAC. `can()`은 `resource.instructorId === user.id`일 때만 허용합니다([42행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-2/apps/api/src/authz/policy.ts#L42)) |
-| 4 없는 강의 id는 404 | API가 존재하지 않는 강의 id로 온 요청에 404와 `{ "error": "not_found" }`로 응답하는지 | Guard가 판단에 쓸 객체 속성(담당 강사)을 DB에서 실제로 읽는가 |
-| 5 공개는 강의 목록 하나뿐 | 토큰 없이 요청했을 때 API가 200으로 응답하는 경로가 `GET /courses` 하나뿐인지. `/courses`로 시작하는 경로 4개를 더 요청해 확인합니다 | 시행 지점(PEP)이 `GET /courses`가 아닌 요청에서 토큰 확인을 건너뛰지 않는가 |
+| 4 존재하지 않는 강의 id는 404 | API가 존재하지 않는 강의 id로 온 요청에 404와 `{ "error": "not_found" }`로 응답하는지 | Guard가 판단에 쓸 객체 속성(담당 강사)을 DB에서 실제로 읽는가 |
+| 5 토큰 없는 요청에 200으로 응답하는 경로는 `GET /courses` 하나뿐 | 토큰 없이 요청했을 때 API가 200으로 응답하는 경로가 `GET /courses` 하나뿐인지. `/courses`로 시작하는 경로 4개를 더 요청해 확인합니다 | 시행 지점(PEP)이 `GET /courses`가 아닌 요청에서 토큰 확인을 건너뛰지 않는가 |
 
 테스트 2와 3의 응답은 둘 다 403이지만 `can()`이 거부하는 규칙이 다릅니다.
 
 - 테스트 2, 역할 규칙(RBAC): 요청한 사람의 역할이 `student`입니다. `roster:read`는 `admin`과 `instructor`만 할 수 있습니다.
 - 테스트 3, 속성 규칙(ABAC): 역할은 `instructor`이지만 강의의 `instructorId`가 요청한 사람의 id와 다릅니다.
 
-이 커밋에서 API 테스트는 76건 중 70건이 통과하고 6건이 실패합니다. 실패한 6건은 이 절에서 추가한 "수강생 명단 1~5" 5건과 3.3절의 "등록된 모든 경로" 1건입니다.
+테스트를 추가한 커밋([`410813e`](https://github.com/loquemedalagana/secure-enroll-demo/commit/410813e))에서 API 테스트는 76건 중 70건이 통과하고 6건이 실패합니다. 실패한 6건은 이 절에서 추가한 "수강생 명단 1~5" 5건과 3.3절의 "등록된 모든 경로" 1건입니다. 아래 출력에 있는 테스트 이름은 변경 전의 이름입니다.
 
 ```
 ✖ 수강생 명단 1: 토큰 없이 401            200 !== 401
