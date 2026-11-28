@@ -96,10 +96,10 @@ git checkout v2-defect-N                  # 결함 상태 재현
 ### 결함 3. 서버 로그에 비밀번호와 토큰이 남음
 
 - **분류**: A09 Security Logging and Alerting Failures / CWE-532 (로그 파일에 민감 정보 기록)
-- **어떻게 생기는가**: 요청 로그를 추가하면서, 인증이 제대로 되는지 보려고 넣은 `console.log` 호출 두 개를 지우지 않습니다. 인증 Guard는 `console.log('auth header', header)`([`auth/auth.guard.ts` 22행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-3/apps/api/src/auth/auth.guard.ts#L22))로 `Authorization` 헤더를 서버 로그에 기록합니다. 로그인 핸들러는 `console.log('login', body)`([`auth/auth.controller.ts` 18행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-3/apps/api/src/auth/auth.controller.ts#L18))로 `POST /auth/login`의 request body를 서버 로그에 기록합니다. 그래서 토큰과 비밀번호가 서버 로그에 남습니다.
+- **어떻게 생기는가**: 요청 로그([`common/request-log.ts`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-3/apps/api/src/common/request-log.ts))는 요청마다 메서드, 주소, 상태 코드, 요청을 처리하는 데 걸린 시간을 서버 로그에 기록합니다. 이 요청 로그를 추가하면서, 인증이 정상으로 동작하는지 확인하려고 넣은 `console.log` 두 줄이 코드에 남아 있습니다. 인증 Guard는 `console.log('auth header', header)`([`auth/auth.guard.ts` 22행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-3/apps/api/src/auth/auth.guard.ts#L22))로 `Authorization` 헤더를 서버 로그에 기록합니다. 로그인 핸들러는 `console.log('login', body)`([`auth/auth.controller.ts` 18행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-3/apps/api/src/auth/auth.controller.ts#L18))로 `POST /auth/login`의 request body를 서버 로그에 기록합니다. 그래서 토큰과 비밀번호가 서버 로그에 남습니다.
 - **왜 위험한가**: 서버에 접근할 수 있는 사람은 앱의 접근통제 없이 로그를 읽을 수 있습니다. 로그는 요청이 끝난 뒤에도 남으므로, 로그에 토큰이 있으면 로그를 읽은 사람은 만료 전까지 그 토큰의 사용자를 사칭해 요청할 수 있습니다. 로그에 비밀번호가 있으면 그 비밀번호로 로그인할 수 있고, 비밀번호는 사용자가 변경하기 전까지 유효합니다.
-- **수정 방향**: `console.log` 호출 두 개를 지웁니다. 로그 한 줄에 들어가는 필드를 한 곳에서 정하고, 헤더와 request body는 넣지 않습니다. 필드는 요청 id, 사용자 id, 메서드, 경로, 인가 결과, 상태 코드, 처리 시간입니다.
-- **검증 테스트**: 로그인하고 신청을 조회한 뒤 서버 로그에 토큰 문자열, 비밀번호 문자열, 전화번호가 없는지 확인합니다.
+- **수정 방향**: `console.log` 두 줄을 지웁니다. 로그 한 줄에 들어가는 필드를 한 곳에서 정하고, 헤더와 request body는 넣지 않습니다. 필드는 요청 id, 사용자 id, 메서드, 경로, 인가 결과, 상태 코드, 처리 시간입니다.
+- **검증 테스트**: 로그인(`POST /auth/login`)하고, 응답으로 받은 토큰을 `Authorization` 헤더에 넣어 `GET /auth/me`를 요청합니다. 로그인과 `GET /auth/me` 요청을 보낸 뒤, 로그인에 쓴 비밀번호와 응답으로 받은 토큰이 서버 로그에 없는지 확인합니다.
 - **브랜치**: `v2/06-logging`
 
 ### 결함 4. 토큰을 브라우저 스크립트가 읽을 수 있는 곳에 보관
