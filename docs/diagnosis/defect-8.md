@@ -11,7 +11,7 @@
 
 ## 1. 요약
 
-API는 신청을 받을 때 신청자를 request body의 `userId` 필드로 정합니다. 서버가 요청에 담긴 식별자를 토큰의 사용자와 비교하지 않고 그대로 쓰므로, 이 취약점은 IDOR입니다. v1의 결함 2(신청 조회에서 소유자를 확인하지 않음)는 신청을 조회할 때의 IDOR였고, 이 결함은 신청할 때의 IDOR입니다. 로그인한 학생이 request body의 `userId`만 바꾸면 다른 사용자의 이름으로 신청할 수 있습니다. 인증과 인가는 모두 통과합니다. 토큰이 유효하고, 학생에게는 신청할 권한이 있기 때문입니다.
+API는 신청을 받을 때 신청자를 request body의 `userId` 필드로 정합니다. 서버가 요청에 담긴 식별자를 토큰의 사용자와 비교하지 않고 그대로 쓰므로, 이 취약점은 IDOR입니다. v1의 결함 2(신청 조회에서 소유자를 확인하지 않음)는 신청을 조회할 때의 IDOR였고, 이 결함은 신청할 때의 IDOR입니다. 로그인한 학생이 request body의 `userId`만 바꾸면 다른 사용자의 이름으로 신청할 수 있습니다. 인증 Guard와 인가 Guard는 이 요청을 통과시킵니다. 토큰이 유효하고, 학생에게는 신청할 권한이 있기 때문입니다.
 
 위험도를 높음으로 본 근거입니다.
 
@@ -19,10 +19,10 @@ API는 신청을 받을 때 신청자를 request body의 `userId` 필드로 정�
 |---|---|
 | 높이는 쪽 | 공격자에게 필요한 것은 학생 계정 하나입니다. 공격자는 request body의 `userId` 필드 하나만 바꿔 보냅니다 |
 | 높이는 쪽 | 대상에 제한이 없습니다. 다른 학생뿐 아니라 강사와 관리자의 id로도 신청됩니다 |
-| 높이는 쪽 | 다른 사람의 이름으로 강의의 정원을 채울 수 있습니다. 정원이 찬 강의는 신청을 받지 않습니다 |
+| 높이는 쪽 | 한 사용자는 같은 강의를 한 번만 신청할 수 있습니다. 그런데 공격자는 request body의 `userId`에 다른 사용자의 id를 하나씩 넣는 방식으로 한 강의에 여러 번 신청해서, 그 강의의 정원을 의도적으로 채울 수 있습니다. 정원이 찬 뒤에는 API가 이 강의를 신청하는 요청에 409로 응답하므로, 다른 학생은 이 강의를 신청할 수 없습니다 |
 | 높이는 쪽 | 요청한 사람은 이 신청을 취소할 수 없습니다. 신청은 본인과 관리자만 취소할 수 있어서, 이름이 도용된 사람(피해자)이나 관리자가 취소해야 합니다 |
 | 높이는 쪽 | 서버에는 요청한 사람(토큰의 사용자)과 신청자가 다르다는 기록이 남지 않습니다. 요청 로그의 `uid`는 요청한 사람이고, 신청에는 request body의 값만 남습니다 |
-| 낮추는 쪽 | 로그인해야 합니다. 토큰 없이는 401입니다 |
+| 낮추는 쪽 | 로그인하지 않은 사람은 이 취약점을 이용할 수 없습니다. API가 토큰 없는 요청에 401로 응답하기 때문입니다 |
 | 낮추는 쪽 | 공격자는 이 취약점으로 다른 사용자의 정보를 조회할 수 없습니다. 응답에는 요청한 사람이 보낸 값만 들어 있습니다 |
 | 낮추는 쪽 | 피해자는 신청 목록에서 그 신청을 확인하고 직접 취소할 수 있습니다 |
 
@@ -87,7 +87,7 @@ node .github/scripts/defects/defect-8.mjs
 
 ## 3. 원인
 
-인증 Guard는 토큰으로 요청한 사람이 누구인지 확인합니다. 그런데 핸들러는 신청을 저장할 때 이 사람을 신청자로 쓰지 않고, request body의 `userId` 필드를 신청자로 씁니다.
+인증 Guard는 토큰을 검증하고 `req.user = user`를 실행합니다([`auth/auth.guard.ts` 24~27행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-8/apps/api/src/auth/auth.guard.ts#L24-L27)). 그런데 신청 생성 핸들러는 신청자를 `req.user`가 아니라 request body의 `userId` 필드로 정합니다.
 
 ```mermaid
 flowchart LR
@@ -122,7 +122,7 @@ flowchart LR
 ### 3.1 원인 코드
 
 - request body의 형식(DTO)에 `userId` 필드가 있습니다: [`enrollments/create-enrollment.dto.ts` 5~8행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-8/apps/api/src/enrollments/create-enrollment.dto.ts#L5-L8).
-- 핸들러가 request body의 `userId`를 서비스에 넘깁니다: [`enrollments/enrollments.controller.ts` 23~25행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-8/apps/api/src/enrollments/enrollments.controller.ts#L23-L25). 토큰의 사용자(`@CurrentUser`)는 이 핸들러에서 쓰이지 않습니다.
+- 핸들러는 24행에서 `this.enrollments.create(body.userId, body.courseId, body.phone)`을 호출합니다: [`enrollments/enrollments.controller.ts` 23~25행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-8/apps/api/src/enrollments/enrollments.controller.ts#L23-L25). 23행의 선언은 `create(@Body() body: CreateEnrollmentDto)`이고, 토큰의 사용자를 받는 `@CurrentUser()`가 없습니다.
 - 서비스는 39행에서 `tx.enrollment.create({ data: { userId, courseId, phone }, select: VIEW })`를 실행해, 받은 `userId`를 그대로 저장합니다: [`enrollments/enrollments.service.ts` 39행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-8/apps/api/src/enrollments/enrollments.service.ts#L39).
 
 ### 3.2 값이 어디에서 오는가
@@ -179,9 +179,9 @@ flowchart LR
 
 | 테스트 | 보내는 요청 | 개발 관점: 무엇을 확인하나 | 보안 관점: 무엇을 지키나 |
 |---|---|---|---|
-| 1 다른 학생의 id를 request body에 넣어도 그 학생의 이름으로 신청되지 않음 | `student3`의 토큰, request body `userId: u4` | DB에 신청자가 `u4`인 신청이 0건인지. API가 201이 아닌 상태 코드로 응답하는지도 확인합니다 | 객체의 속성(소유자). 같은 역할의 다른 사용자 |
-| 2 관리자의 id를 request body에 넣어도 관리자의 이름으로 신청되지 않음 | `student3`의 토큰, request body `userId: a1` | DB에 신청자가 `a1`인 신청이 0건인지. API가 201이 아닌 상태 코드로 응답하는지도 확인합니다 | 객체의 속성(소유자). 역할이 다른 사용자 |
-| 3 request body의 userId가 무엇이든 신청자는 요청한 사람 | `student3`의 토큰, request body의 `userId`를 `u3`, `u4`, `u5`, `i1`, `a1`로 바꿔 5번 요청 | DB에 새로 저장된 신청 중 신청자가 `u3`이 아닌 신청이 0건인지 | 주체와 소유자의 일치. 어떤 값이 와도 지켜져야 하는 성질 |
+| 1 다른 학생의 id를 request body에 넣어도 그 학생의 이름으로 신청되지 않음 | `student3`의 토큰, request body `userId: u4` | DB에 신청자가 `u4`인 신청이 0건인지. API가 201이 아닌 상태 코드로 응답하는지도 확인합니다 | 객체의 속성(소유자). 학생이 다른 학생의 이름으로 신청할 수 없는가 |
+| 2 관리자의 id를 request body에 넣어도 관리자의 이름으로 신청되지 않음 | `student3`의 토큰, request body `userId: a1` | DB에 신청자가 `a1`인 신청이 0건인지. API가 201이 아닌 상태 코드로 응답하는지도 확인합니다 | 객체의 속성(소유자). 학생이 관리자의 이름으로 신청할 수 없는가 |
+| 3 request body의 userId가 무엇이든 신청자는 요청한 사람 | `student3`의 토큰, request body의 `userId`를 `u3`, `u4`, `u5`, `i1`, `a1`로 바꿔 5번 요청 | DB에 새로 저장된 신청 중 신청자가 `u3`이 아닌 신청이 0건인지 | 객체의 속성(소유자). request body의 `userId`가 어떤 값이어도 신청자가 요청한 사람인가 |
 
 테스트는 API가 요청을 거부하는 방식을 정하지 않습니다. 상태 코드는 201이 아닌지만 확인합니다. API가 request body의 `userId`를 토큰의 사용자와 비교해 403으로 응답하게 고칠 수도 있고, request body에서 `userId`를 없애 400으로 응답하게 고칠 수도 있습니다. 어느 방안으로 고칠지는 4.1절에서 방안을 하나씩 적용해 본 뒤에 정합니다.
 
@@ -386,7 +386,7 @@ flowchart TD
 | 파일 | 바꾼 것 |
 |---|---|
 | [`enrollments/create-enrollment.dto.ts`](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-fix-8/apps/api/src/enrollments/create-enrollment.dto.ts) | request body의 형식에서 `userId` 필드를 지웠습니다. `userId`를 보내면 선언하지 않은 필드이므로 전역 `ValidationPipe`가 400으로 거부합니다 |
-| [`enrollments/enrollments.controller.ts` 24~26행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-fix-8/apps/api/src/enrollments/enrollments.controller.ts#L24-L26) | 핸들러가 `@CurrentUser`로 받은 사용자의 id를 서비스에 넘김 |
+| [`enrollments/enrollments.controller.ts` 24~26행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-fix-8/apps/api/src/enrollments/enrollments.controller.ts#L24-L26) | 24행의 선언에 `@CurrentUser() user: AuthUser`를 추가하고, 25행에서 `this.enrollments.create(user.id, body.courseId, body.phone)`을 호출합니다 |
 
 ```diff
 -  create(@Body() body: CreateEnrollmentDto): Promise<EnrollmentView> {
