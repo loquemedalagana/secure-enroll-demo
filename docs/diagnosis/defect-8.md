@@ -144,17 +144,17 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  req(["테스트의 요청<br/>토큰: student3<br/>body userId:<br/>다른 사용자"])
+  req(["테스트의 요청<br/>토큰: student3<br/>request body의 userId:<br/>다른 사용자의 id"])
 
   subgraph api["API"]
-    g["인증·인가 Guard<br/>학생의 신청 생성<br/>허용"]
+    g["인증·인가 Guard<br/>학생의 신청 생성을<br/>허용함"]
     h["신청 생성 핸들러"]
   end
 
   db[("enrollments")]
 
   req --> g --> h
-  h == "body의 userId" ==> db
+  h == "request body의 userId" ==> db
 
   db -.- t1["테스트 1<br/>다른 학생의 이름으로<br/>신청되지 않는가"]
   db -.- t2["테스트 2<br/>관리자의 이름으로<br/>신청되지 않는가"]
@@ -234,11 +234,11 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-  t(["요청의 값을 바꿔 보냄<br/>파라미터 변조"]) --> q1{"바꾼 값이<br/>식별자인가"}
-  q1 -- 아니요 --> q2{"서버가 그 값을<br/>그대로 쓰는가"}
+  t(["공격자가 요청의 값을 바꿔 보냄<br/>파라미터 변조"]) --> q1{"바꾼 값이<br/>식별자인가"}
+  q1 -- 아니요 --> q2{"서버가 바뀐 값을<br/>그대로 쓰는가"}
   q2 -- 예 --> v1["파라미터 변조 취약점, CWE-472<br/>예: 결제 요청의 가격"]
   q2 -- 아니요 --> b1["공격이 통하지 않음<br/>서버가 가진 값으로 다시 정함"]
-  q1 -- 예 --> q3{"서버가 그 식별자로<br/>권한을 확인하는가"}
+  q1 -- 예 --> q3{"서버가 바뀐 식별자로 찾은 객체에<br/>요청한 사람의 권한이 있는지<br/>확인하는가"}
   q3 -- 아니요 --> v2["IDOR, CWE-639<br/>결함 8: request body의 userId"]
   q3 -- 예 --> b2["공격이 통하지 않음<br/>신청 취소의 경로 id: API가 403으로 응답"]
 
