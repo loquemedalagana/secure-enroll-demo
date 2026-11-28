@@ -149,7 +149,7 @@ flowchart LR
   linkStyle 3,4 stroke:#A32D2D,stroke-width:2px
 ```
 
-- 빨간색 상자는 검색어를 SQL 문자열에 이어 붙이는 강의 검색과, 그 쿼리가 읽는 `users` 테이블과 `enrollments` 테이블을 나타냅니다.
+- 빨간색 상자는 API의 강의 검색과, 강의 검색의 쿼리가 조회하는 `users` 테이블과 `enrollments` 테이블을 나타냅니다.
 - 빨간색 화살표는 검색어에 포함된 `UNION SELECT`가 `users` 테이블과 `enrollments` 테이블을 읽는 흐름을 나타냅니다.
 - 초록색 상자는 정상으로 동작하는 Guard와, 강의 검색이 읽는 `courses` 테이블을 나타냅니다.
 
@@ -218,7 +218,7 @@ flowchart LR
   linkStyle 1,3 stroke:#A32D2D,stroke-width:3px
 ```
 
-- 빨간색 상자는 검색어를 SQL 문자열에 이어 붙이는 강의 검색과, 그 쿼리가 읽는 `users` 테이블과 `enrollments` 테이블을 나타냅니다.
+- 빨간색 상자는 API의 강의 검색과, 강의 검색의 쿼리가 조회하는 `users` 테이블과 `enrollments` 테이블을 나타냅니다. 강의 검색은 검색어를 SQL 문자열에 포함하여 `$queryRawUnsafe`로 실행합니다.
 - 빨간색 화살표는 결함 상태에서 강의 검색이 `users` 테이블의 비밀번호 해시와 `enrollments` 테이블의 전화번호를 읽는 흐름을 나타냅니다.
 - 초록색 상자는 강의 검색이 읽는 `courses` 테이블을 나타냅니다.
 - 파란색 상자는 테스트를 나타냅니다.
