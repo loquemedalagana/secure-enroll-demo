@@ -233,7 +233,7 @@ flowchart LR
 
 테스트 1~4는 SQL 인젝션에 쓰는 검색어를 하나씩 보내 API의 응답을 확인합니다. 테스트 5는 검색어가 무엇이든 성립해야 하는 조건을 확인합니다. 테스트 5는 `GET /courses`로 강의 전체 목록을 조회해 제목에 검색어가 포함된 강의만 고릅니다([`apps/api/test/courses.test.mjs` 90행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-fix-6/apps/api/test/courses.test.mjs#L90)). 그리고 검색 응답에 이 강의가 아닌 행이 없는지([91~92행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-fix-6/apps/api/test/courses.test.mjs#L91-L92)), 검색 응답의 건수가 고른 강의의 수와 같은지([93행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-fix-6/apps/api/test/courses.test.mjs#L93)) 확인합니다.
 
-이 커밋에서 API 테스트는 99건 중 94건이 통과하고 5건이 실패합니다.
+테스트를 추가한 커밋([`d8eb300`](https://github.com/loquemedalagana/secure-enroll-demo/commit/d8eb300))에서 API 테스트는 99건 중 94건이 통과하고 5건이 실패합니다. 아래 출력에 있는 테스트 이름은 변경 전의 이름입니다.
 
 ```
 ✖ 강의 검색 1: 작은따옴표가 든 검색어도 오류 없이 200에 0건

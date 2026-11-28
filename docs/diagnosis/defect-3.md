@@ -195,7 +195,7 @@ flowchart LR
 
 테스트 1로는 인증 Guard가 토큰을 서버 로그에 기록하는 것을 확인할 수 없습니다. 3.3절에 적은 대로, 테스트 1은 발급받은 토큰을 `Authorization` 헤더에 넣어 다시 요청하지 않습니다. 테스트 2는 토큰을 헤더에 넣어 `GET /auth/me`를 요청합니다.
 
-테스트를 추가한 커밋([`223a7e4`](https://github.com/loquemedalagana/secure-enroll-demo/commit/223a7e4))에서 API 테스트는 87건 중 85건이 통과하고 2건이 실패합니다. 아래 출력에 있는 테스트 이름은 고치기 전의 이름입니다.
+테스트를 추가한 커밋([`223a7e4`](https://github.com/loquemedalagana/secure-enroll-demo/commit/223a7e4))에서 API 테스트는 87건 중 85건이 통과하고 2건이 실패합니다. 아래 출력에 있는 테스트 이름은 변경 전의 이름입니다.
 
 ```
 ✖ 서버 출력에 비밀번호와 토큰 값이 없음
