@@ -3,7 +3,7 @@
 [![ci](https://github.com/loquemedalagana/secure-enroll-demo/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/loquemedalagana/secure-enroll-demo/actions/workflows/ci.yml)
 
 세미나 신청 서비스를 웹(Next.js), API(Nest.js), DB(PostgreSQL)로 나누어 만들고, 인증과 인가를 설계해 테스트와 CI로 검증하는 저장소입니다.
-결함을 경로마다 하나씩 고치지 않고 인가 판단을 한 곳에 모아, 같은 종류의 결함이 다시 생기지 않게 했습니다. 그 과정은 코드와 테스트에 남아 있습니다.
+결함이 있는 경로를 따로따로 고치는 대신 인가 판단을 한 곳에 모아, 같은 종류의 접근통제 취약점이 다시 생기지 않게 했습니다. 그 과정은 코드와 테스트에 남아 있습니다.
 같은 원칙(기본 거부 + 명시 허용)을 네트워크 계층에도 적용해 로컬 쿠버네티스 클러스터에서 검증한 구성이 `k8s/`에 있습니다.
 
 일부러 넣은 결함은 `vulnerable` 브랜치(v1)와 결함별 태그(v2)에만 있고, `main`에는 수정된 코드만 있습니다. 사용자, 데이터, 시크릿은 모두 더미 값입니다.
@@ -17,7 +17,7 @@
 | 웹 (Next.js 14) | `apps/web` | v1의 앱 그대로입니다. 인메모리 데이터로 동작하고 아직 API를 호출하지 않습니다 |
 | API (Nest.js 12) | `apps/api` | 헬스 체크, 로그인, 토큰 발급·검증, 전역 인증·인가 Guard, 신청 조회·생성·취소, 강의 목록·검색과 수강생 명단, 요청 로그. 테스트 134건 |
 | DB (PostgreSQL 18) | `compose.yaml`, `apps/api/prisma` | Prisma 마이그레이션과 더미 시드 |
-| CI | `.github/workflows/ci.yml`, `.github/workflows/defects.yml` | `ci`: `web`, `api`, `audit`(앱별), `netpol`. `defects`: 결함마다 결함 태그와 수정 태그를 띄워 재현 |
+| CI | `.github/workflows/ci.yml`, `.github/workflows/defects.yml` | `ci`: `web`, `api`, `audit`(앱별), `netpol`. `defects`: 결함별로 결함 태그와 수정 태그의 API를 띄워 재현 |
 | 네트워크 정책 | `k8s/` | kind와 Cilium으로 웹 앱에 적용해 검증 |
 | v2의 의도된 결함 | [docs/v2-defects.md](docs/v2-defects.md) | 8개 중 5개를 다뤘습니다. 진단 보고서: [결함 1](docs/diagnosis/defect-1.md), [결함 2](docs/diagnosis/defect-2.md), [결함 3](docs/diagnosis/defect-3.md), [결함 6](docs/diagnosis/defect-6.md), [결함 8](docs/diagnosis/defect-8.md) |
 
@@ -37,7 +37,13 @@
 | `POST /enrollments` | 401 | 201 (본인의 이름으로만) | 403 | 403 |
 | `DELETE /enrollments/:id` | 401 | 본인의 신청 204, 다른 사용자의 신청 403 | 403 | 204 |
 
-`GET /enrollments`는 사람마다 범위가 다릅니다. 학생은 본인의 신청, 강사는 담당 강의의 신청, 관리자는 전체를 받습니다. 판단은 `apps/api/src/authz/policy.ts`의 `can()` 한 곳에서 하고, 모든 요청이 전역 Guard를 지납니다.
+`GET /enrollments`에는 API가 요청한 사람의 역할에 따라 다르게 응답합니다.
+
+- 학생: 본인의 신청
+- 강사: 담당 강의의 신청
+- 관리자: 전체 신청
+
+인가 판단은 `apps/api/src/authz/policy.ts`의 `can()` 한 곳에서 하고, 전역 Guard는 모든 요청에 적용됩니다.
 
 | 문서 | 내용 |
 |---|---|
@@ -66,7 +72,7 @@ git diff vulnerable fixed -- app lib middleware.ts   # 인가 구조가 어떻�
 git diff vulnerable fixed -- tests                   # 무엇으로 검증했는지
 ```
 
-v2의 결함은 결함마다 태그 한 쌍으로 봅니다. 지금은 결함 1~3, 6, 8의 태그가 있고, 결함을 다루는 PR마다 한 쌍씩 생깁니다.
+v2의 결함은 결함 태그(`v2-defect-N`)와 수정 태그(`v2-fix-N`) 한 쌍으로 확인합니다. 지금은 결함 1~3, 6, 8의 태그가 있습니다. 결함 하나를 다루는 PR에서 태그 한 쌍을 추가합니다.
 ```bash
 git diff v2-defect-N v2-fix-N -- apps                # 결함 N을 어떻게 고쳤는지
 git checkout v2-defect-N                             # 결함 N의 상태 재현
@@ -74,7 +80,7 @@ git checkout v2-defect-N                             # 결함 N의 상태 재현
 
 ## 의도된 결함 (vulnerable)
 1. **역할 확인 누락 (OWASP A01 Broken Access Control)** — `/api/admin/enrollments`가 로그인 여부만 확인하고 역할은 확인하지 않음
-2. **소유자 확인 누락 (BOLA/IDOR)** — `/api/enrollments/[id]`가 요청자와 신청 소유자를 비교하지 않음
+2. **소유자 확인 누락 (BOLA/IDOR)** — `/api/enrollments/[id]`가 요청자의 id를 신청자의 id와 비교하지 않음
 3. **인증을 미들웨어에만 의존** — 핸들러 안에서 세션을 다시 검증하지 않음
 
 ## 인가의 전제: 세션 무결성 (두 브랜치 공통)
