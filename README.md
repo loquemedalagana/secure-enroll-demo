@@ -73,14 +73,14 @@ git checkout v2-defect-N                             # 결함 N의 상태 재현
 ```
 
 ## 의도된 결함 (vulnerable)
-1. **역할 확인 누락 (OWASP A01 Broken Access Control)** — `/api/admin/enrollments`가 로그인 여부만 보고 역할은 보지 않음
+1. **역할 확인 누락 (OWASP A01 Broken Access Control)** — `/api/admin/enrollments`가 로그인 여부만 확인하고 역할은 확인하지 않음
 2. **소유자 확인 누락 (BOLA/IDOR)** — `/api/enrollments/[id]`가 요청자와 신청 소유자를 비교하지 않음
 3. **인증을 미들웨어에만 의존** — 핸들러 안에서 세션을 다시 검증하지 않음
 
 ## 인가의 전제: 세션 무결성 (두 브랜치 공통)
 인가 판단은 세션이 위조되지 않았다는 것을 전제로 합니다. 그래서 세션을 위조할 수 없도록 인증을 보강했습니다. 의도된 결함과 무관하므로 두 브랜치에 똑같이 들어 있습니다.
 - `SESSION_SECRET`이 없으면 공개된 기본값으로 서명하지 않고 실패합니다(세션 위조 방지).
-- 로그인은 `application/json` request body만 받고(415), 다른 출처의 요청은 거부합니다(403). 다른 사이트의 폼으로 피해자를 공격자 계정에 로그인시키는 로그인 CSRF를 막습니다. 회귀 테스트: `apps/web/tests/login.test.mjs`
+- 로그인은 `application/json` request body만 받고(415), 다른 출처의 요청은 거부합니다(403). 다른 사이트의 폼으로 피해자를 공격자 계정에 로그인시키는 로그인 CSRF를 방어합니다. 회귀 테스트: `apps/web/tests/login.test.mjs`
 
 ## 실행
 
@@ -135,7 +135,7 @@ npm run dev     # 수동 확인
 - 이 구조가 제로 트러스트의 정책 결정 지점(PDP)과 정책 시행 지점(PEP)에 어떻게 해당하는지는 다음 문서에 적었습니다: [docs/zero-trust-mapping.md](docs/zero-trust-mapping.md)
 
 ### 검증
-- `npm test` 29건 통과, 0건 실패 (정책 단위 16건 + 권한 매트릭스 10건 + 로그인 요청 형식·출처 검사 3건)
+- `npm test` 29건 통과, 0건 실패 (정책 단위 16건 + 권한 매트릭스 10건 + 로그인 CSRF 방어 3건)
 - 오류 응답 점검 (`next start`로 로컬 실행, 2026-10-24): response body에 스택 트레이스나 파일 경로가 노출되지 않음
 
 | 요청 | 응답 |
@@ -203,7 +203,7 @@ node k8s/verify/run.mjs     # 기준선 → 정책 적용 → 매트릭스 → H
 ### 결과
 정책을 적용하기 전에는 유효한 관리자 계정으로 보낸 요청이 `bystander`와 `outsider`에서도 200을 받고, 앱은 쿠버네티스 API 서버에 연결됩니다. 정책을 적용한 뒤의 결과는 다음과 같습니다.
 
-| 출발지 | 사용자 | 요청 | 결과 | 막은 계층 |
+| 출발지 | 사용자 | 요청 | 결과 | 차단한 계층 |
 |---|---|---|---|---|
 | `gateway` | 비로그인 | 관리자 API | 401 | 앱 |
 | `gateway` | student1 | 관리자 API | 403 | 앱 |
