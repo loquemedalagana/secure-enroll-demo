@@ -30,11 +30,11 @@ v2에서 고른 것, 채택하지 않은 대안, 그 선택으로 감수하는 �
 - **이유**: 외부 서비스를 쓰지 않는다는 저장소 규칙이 있고, 의존성 하나하나가 감사 대상입니다. API의 lock 파일은 263개 패키지이고 high 이상 권고 예외가 없습니다.
 - **감수하는 것**: `nest generate`, `nest start --watch` 같은 편의 명령이 없습니다.
 
-## 5. 린트는 아직 넣지 않았다 (넣을 예정)
+## 5. 린트는 넣지 않았다 (넣을 시점은 정하지 않음)
 
 - **현재**: 두 앱 모두 린트가 없습니다. 타입 검사는 `tsc`의 `strict`가 합니다.
-- **넣을 것**: API 코드가 쌓인 뒤 CI 잡으로 추가합니다. 대상 규칙은 `await` 누락(`no-floating-promises`), `eval` 계열 금지, React의 HTML 직접 삽입 금지(`no-danger`)입니다.
-- **미룬 이유**: 검사할 API 코드가 거의 없는 시점에 넣으면 설정만 늘고 걸리는 것이 없습니다. 도구(ESLint, oxlint)는 위 규칙을 지원하는지 확인한 뒤 고릅니다.
+- **넣을 것**: 린트를 넣을 시점은 정하지 않았습니다. 넣을 때는 CI 잡으로 추가합니다. 대상 규칙은 `await` 누락(`no-floating-promises`), `eval` 계열 금지, React의 HTML 직접 삽입 금지(`no-danger`)입니다.
+- **미룬 이유**: 이 결정을 적은 커밋([`c373e10`](https://github.com/loquemedalagana/secure-enroll-demo/commit/c373e10), 2026-11-23)에서 [`apps/api/src`](https://github.com/loquemedalagana/secure-enroll-demo/tree/c373e10/apps/api/src)의 파일은 10개였고, 컨트롤러는 `health.controller.ts` 하나였습니다. 린트가 검사할 코드가 적어서 미뤘습니다. 도구(ESLint, oxlint)는 위 규칙을 지원하는지 확인한 뒤 고릅니다.
 
 ## 6. 의존성 설치 스크립트를 실행하지 않는다 (API)
 
