@@ -22,7 +22,7 @@ flowchart LR
     a1["audit-gate.mjs<br/>예외 목록과 대조"]
   end
   subgraph netpol["netpol · 네트워크 정책"]
-    n1["kind · Cilium CLI<br/>체크섬 확인"] --> n2["k8s/up.sh<br/>클러스터 · 배포"] --> n3["k8s/verify/run.mjs<br/>기준선 · 매트릭스"] --> n4["작업 요약에<br/>결과 표"]
+    n1["kind · Cilium CLI<br/>체크섬 확인"] --> n2["k8s/up.sh<br/>클러스터 · 배포"] --> n3["k8s/verify/run.mjs<br/>기준선 · 매트릭스"] --> n4["작업 요약에<br/>결과 표를 남김"]
   end
 
   trig --> t1
