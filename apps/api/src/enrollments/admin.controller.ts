@@ -6,7 +6,7 @@ import { type EnrollmentView, EnrollmentsService } from './enrollments.service.j
 export class AdminController {
   constructor(private readonly enrollments: EnrollmentsService) {}
 
-  // 전체 신청 목록. 관리자만 볼 수 있다.
+  // 전체 신청 목록을 조회한다. 관리자만 조회할 수 있다.
   @Get('enrollments')
   @Authorize('admin:read')
   @Header('Cache-Control', 'no-store')
