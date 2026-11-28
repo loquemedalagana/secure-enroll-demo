@@ -23,7 +23,7 @@ API는 전체 신청 목록 요청(`GET /admin/enrollments`)에 토큰 확인 �
 | 낮추는 쪽 | 이 취약점은 기밀성만 침해합니다. 이 경로는 조회만 하므로 신청 데이터를 변경하거나 삭제할 수 없고, 무결성은 침해하지 않습니다 |
 | 낮추는 쪽 | 응답에 비밀번호 해시나 토큰은 없습니다. 그래서 이 취약점만으로는 다른 사용자의 계정 탈취로 이어지지 않습니다 |
 
-낮추는 쪽 두 가지는 피해의 종류를 좁힐 뿐이고, 누구나 전체 개인정보를 읽는다는 점은 그대로여서 높음으로 둡니다.
+이 취약점이 기밀성만 침해한다는 것과 응답에 비밀번호 해시나 토큰이 없다는 것은 위험도를 낮추는 근거입니다. 그런데 이 두 근거가 있어도 공격자는 토큰 없이 모든 신청자의 전화번호를 조회할 수 있습니다. 그래서 위험도를 높음으로 둡니다.
 
 ## 2. 재현 절차
 
@@ -113,7 +113,7 @@ flowchart LR
 - 결함 상태의 코드는 Guard를 전역으로 등록하지 않고, 컨트롤러마다 `@UseGuards(AuthGuard, AuthzGuard)`를 붙입니다([`auth/auth.controller.ts` 10행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/auth/auth.controller.ts#L10), [`enrollments/enrollments.controller.ts` 8행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/enrollments/enrollments.controller.ts#L8)).
 - 관리자 컨트롤러([`enrollments/admin.controller.ts` 5행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/enrollments/admin.controller.ts#L5))에는 `@UseGuards`가 없습니다.
 - 핸들러에는 `@Authorize('admin:read')`가 붙어 있습니다([11행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/enrollments/admin.controller.ts#L11)). `@Authorize`를 읽고 `can()`을 호출하는 코드는 인가 Guard에 있습니다([`authz/authz.guard.ts` 34행, 51행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/src/authz/authz.guard.ts#L34-L51)). 이 컨트롤러에는 인가 Guard가 적용되지 않아서 34행과 51행이 실행되지 않습니다.
-- 관리자로 로그인해서 확인하면 목록이 정상으로 나옵니다. 정상 경로만 확인하는 기존 테스트 59건은 이 상태에서 모두 통과합니다.
+- 관리자로 로그인해서 요청하면 목록이 정상으로 나옵니다. 이 태그의 테스트 59건 중 `GET /admin/enrollments`를 요청하는 테스트는 관리자 토큰으로 요청하는 1건뿐입니다([`apps/api/test/enrollments.test.mjs` 58행](https://github.com/loquemedalagana/secure-enroll-demo/blob/v2-defect-1/apps/api/test/enrollments.test.mjs#L58)). 토큰 없이 요청하는 테스트가 없어서 59건이 모두 통과합니다.
 
 ### 3.1 결함을 잡는 테스트
 
