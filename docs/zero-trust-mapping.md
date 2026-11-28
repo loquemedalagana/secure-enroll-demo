@@ -6,14 +6,14 @@
 
 ```mermaid
 flowchart TD
-  req(["요청"]) --> np["네트워크 정책<br/>k8s/ 구성 전용"]
+  req(["요청"]) --> np["네트워크 정책<br/>k8s/ 구성에만 있음"]
   np -- "허용되지 않은 출발지" --> drop["응답 없음<br/>시간 초과"]
-  np -- "gateway에서 옴" --> mw["apps/web/middleware.ts<br/>1차 관문 · 보조"]
-  mw -- "세션 없음" --> unauth["API 401<br/>페이지: 로그인"]
+  np -- "허용된 출발지 (gateway)" --> mw["apps/web/middleware.ts<br/>세션 확인 · 보조"]
+  mw -- "세션 없음" --> unauth["API: 401<br/>페이지: /login으로 리다이렉트"]
   mw -- "세션 있음" --> pep["핸들러 · 페이지<br/>세션 재검증<br/>PEP · 시행"]
   pep -- "세션 없음" --> unauth
   pep -- "세션 유효" --> pdp["apps/web/lib/policy.ts<br/>can() 판단<br/>PDP · 결정"]
-  pdp -- "false" --> forbid["API 403<br/>페이지: 안내 화면"]
+  pdp -- "false" --> forbid["API: 403<br/>페이지: 안내 화면"]
   pdp -- "true" --> ok(["응답 200"])
 
   classDef allow fill:#d1f5dd,stroke:#1a7f37,color:#0b3d1b
