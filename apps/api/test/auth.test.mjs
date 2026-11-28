@@ -90,14 +90,14 @@ test('서버 출력에 비밀번호와 토큰 값이 없음', async () => {
 test('서버 출력에 요청으로 받은 토큰 값이 없음 (유효한 토큰, 유효하지 않은 토큰)', async () => {
   const valid = await tokenFor('student1');
   assert.equal((await me(`Bearer ${valid}`)).status, 200);
-  // 검증에 실패한 토큰도 로그에 남으면 안 된다. 다른 테스트와 겹치지 않는 값을 쓴다.
+  // 유효하지 않은 토큰도 서버 로그에 남으면 안 된다. 다른 테스트의 토큰과 겹치지 않는 값을 쓴다.
   const wrong = 'bG9nLWNoZWNrLXdyb25nLXRva2Vu.bm90LWEtcmVhbC1zaWduYXR1cmU';
   assert.equal((await me(`Bearer ${wrong}`)).status, 401);
 
   const output = server.output();
-  // 실패 문구에 토큰 값이 찍히지 않도록 문구를 직접 준다.
+  // assert가 실패할 때 토큰 값을 테스트 로그에 기록하지 않도록 문구를 직접 준다.
   assert.ok(!output.includes(valid), '유효한 토큰이 서버 출력에 있습니다');
-  assert.ok(!output.includes(wrong), '검증에 실패한 토큰이 서버 출력에 있습니다');
+  assert.ok(!output.includes(wrong), '유효하지 않은 토큰이 서버 출력에 있습니다');
 });
 
 // ---- 전역 인증 Guard ----
@@ -126,7 +126,7 @@ test('유효한 토큰 → API는 200과 요청한 사람의 id, 역할로 응�
   assert.deepEqual(await admin.json(), { id: 'a1', role: 'admin' });
 });
 
-test('토큰이 없거나 Authorization 형식이 틀리면 401', async () => {
+test('토큰이 없거나 Authorization 헤더의 형식이 잘못되면 401', async () => {
   const token = await tokenFor('student1');
   await assertUnauthorized(await me(undefined), '헤더 없음');
   for (const header of ['Bearer', 'Bearer ', token, `Basic ${token}`, `Bearer ${token} extra`, `Bearer ${token}.extra`]) {
@@ -145,13 +145,13 @@ test('만료된 토큰 → 401', async () => {
   // 서버와 같은 키로, 발급 시각을 1시간 1초 전으로 해서 만든다.
   const expired = issueToken('u1', TOKEN_SECRET, Date.now() - 3601 * 1000);
   await assertUnauthorized(await me(`Bearer ${expired}`), '만료');
-  // 같은 방식으로 지금 발급한 토큰은 통과한다(위 거부가 만료 때문임을 확인).
+  // 같은 키로 지금 발급한 토큰에는 API가 200으로 응답한다. 앞의 401이 만료 때문이라는 것을 확인한다.
   assert.equal((await me(`Bearer ${issueToken('u1', TOKEN_SECRET)}`)).status, 200);
 });
 
 test('다른 키로 서명한 토큰, 존재하지 않는 사용자의 토큰 → 401', async () => {
   await assertUnauthorized(await me(`Bearer ${issueToken('a1', 'attacker-chosen-secret-00000000000000')}`), '다른 키');
-  await assertUnauthorized(await me(`Bearer ${issueToken('no-such-user', TOKEN_SECRET)}`), '없는 사용자');
+  await assertUnauthorized(await me(`Bearer ${issueToken('no-such-user', TOKEN_SECRET)}`), '존재하지 않는 사용자');
 });
 
 test('역할은 토큰이 아니라 DB에서 읽음: 역할을 바꾸면 같은 토큰의 다음 요청에 반영됨', async () => {
@@ -168,7 +168,7 @@ test('역할은 토큰이 아니라 DB에서 읽음: 역할을 바꾸면 같은 
   }
 });
 
-test('@Public이 붙은 경로(헬스 체크, 로그인)는 토큰 없이 열려 있음', async () => {
+test('@Public이 붙은 경로(헬스 체크, 로그인): API는 토큰 없는 요청에 200으로 응답함', async () => {
   assert.equal((await fetch(`${server.base}/health/live`)).status, 200);
   assert.equal((await fetch(`${server.base}/health/ready`)).status, 200);
   assert.equal((await login({ username: 'student1', password: 'student1-pass' })).status, 200);
