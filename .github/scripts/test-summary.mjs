@@ -1,4 +1,4 @@
-// node --test의 출력에서 건수와 실패한 테스트 이름, 실패한 이유의 일부를 뽑아 작업 요약(GITHUB_STEP_SUMMARY)에 쓴다.
+// node --test의 출력에서 건수와 실패한 테스트 이름, 실패한 이유의 일부를 뽑아 Summary(GITHUB_STEP_SUMMARY)에 쓴다.
 // 이유는 테스트에 직접 적은 문구와 숫자끼리의 비교만 옮긴다. 응답의 값은 옮기지 않는다(test-output.mjs).
 //
 // 사용법: node .github/scripts/test-summary.mjs <제목> <테스트 출력 파일>
