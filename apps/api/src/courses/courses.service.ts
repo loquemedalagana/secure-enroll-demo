@@ -14,7 +14,7 @@ export class CoursesService {
   }
 
   // 제목에 검색어가 포함된 강의를 DB에서 읽는다. 대소문자는 구분하지 않는다(ILIKE).
-  // 검색어는 SQL 문자열에 넣지 않고 플레이스홀더의 값으로 넘긴다. $queryRawUnsafe로 바꾸지 않는다.
+  // 검색어는 SQL 문자열에 포함하지 않고 플레이스홀더의 값으로 넘긴다. $queryRawUnsafe로 바꾸지 않는다.
   search(q: string): Promise<CourseView[]> {
     // 검색어의 %와 _는 LIKE의 와일드카드라서, 글자 그대로 찾도록 앞에 역슬래시를 붙인다.
     // 역슬래시는 PostgreSQL에서 LIKE의 기본 이스케이프 문자다. 이 이스케이프를 적용하지 않으면 검색 결과만 달라진다.
