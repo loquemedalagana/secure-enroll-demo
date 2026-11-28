@@ -9,7 +9,7 @@ requireEnv('DATABASE_URL');
 requireSecret('TOKEN_SECRET');
 
 const app = await NestFactory.create<NestExpressApplication>(AppModule);
-// 응답 헤더로 프레임워크 이름을 알리지 않는다.
+// 응답에 X-Powered-By 헤더를 포함하지 않는다. 이 헤더에는 프레임워크 이름이 들어 있다.
 app.disable('x-powered-by');
 app.use(requestLog);
 app.enableShutdownHooks();
